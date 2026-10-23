@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------
 import {
   SWING, MAGNET, B_FIELD, L_FIELD, G, PENDULUM_L, SWING_MASS, AIR_DAMPING, CIRCUIT_R, BRAKE_BOOST,
-  MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, PUSH_ANGLE_LONG, METER, MAGNET_DRAG_MAX_SPEED, magnetLegs, magnetZRange,
+  EXPLAIN, MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, PUSH_ANGLE_LONG, METER, MAGNET_DRAG_MAX_SPEED, magnetLegs, magnetZRange,
 } from './config.js';
 import { state } from './state.js';
 
@@ -21,6 +21,8 @@ export const swing = { theta: 0, omega: 0, dragging: false, target: 0 };
 export const magnetMotion = { z: 0, v: 0, dragging: false, target: 0 };
 // Zeiger des Messgeräts: Ausschlag als Anteil des Vollausschlags (−1 … 1), Geschwindigkeit
 export const needle = { pos: 0, vel: 0 };
+// Erklärmodus: Lage des Elektrons entlang des Stabs in cm (0 = Mitte, positiv = rechts)
+export const electron = { x: 0 };
 
 // ---------------- Geometrie
 
@@ -40,7 +42,7 @@ export function toMagnetFrame({ y, z }, alphaDeg = state.magnetAngle, magnetZ = 
 // Berührt der Stab (Querschnitt: Kreis) den Magneten? Schenkel als Rechtecke, Bogen als halber Kreisring.
 export function collides(theta, alphaDeg, magnetZ = 0) {
   const { u, w } = toMagnetFrame(barOffset(theta), alphaDeg, magnetZ);
-  const r = SWING.BAR_R, inner = MAGNET.GAP / 2, outer = inner + MAGNET.THICK;
+  const r = state.explain ? EXPLAIN.BAR_R : SWING.BAR_R, inner = MAGNET.GAP / 2, outer = inner + MAGNET.THICK;
   const { Z_IN, Z_OPEN } = magnetLegs(state.longMagnet);
   for (const sign of [1, -1]) {
     const du = Math.max(Z_IN - u, u - Z_OPEN, 0);
@@ -57,7 +59,7 @@ export function collides(theta, alphaDeg, magnetZ = 0) {
 // Bewegungsbereich der Schaukel [θmin, θmax] beim drehbaren Magneten mit Winkel α (abgetastet, zwischengespeichert)
 const limitCache = new Map();
 export function swingLimits(alphaDeg = state.magnetAngle) {
-  const key = Math.round(alphaDeg * 10) + (state.longMagnet ? 10000 : 0);
+  const key = Math.round(alphaDeg * 10) + (state.longMagnet ? 10000 : 0) + (state.explain ? 20000 : 0);
   if (!limitCache.has(key)) {
     const step = degToRad(0.1), max = degToRad(SWING.MAX_ANGLE);
     const scan = sign => {
@@ -105,6 +107,16 @@ export function relativeVelocity() {
 export function emf() {
   const v = relativeVelocity(), B = fieldAtBar();
   return L_FIELD * (v.y * B.z - v.z * B.y);
+}
+
+// Lorentzkraft auf das Elektron pro Elementarladung in V/m (Vektor): F/e = −(v × B), v relativ zum Magneten
+export function electronForce() {
+  const v = relativeVelocity(), B = fieldAtBar();
+  return {
+    x: -(v.y * B.z - v.z * B.y),
+    y: -(v.z * B.x - v.x * B.z),
+    z: -(v.x * B.y - v.y * B.x),
+  };
 }
 
 // Stromstärke in A (in x-Richtung durch den Stab); bei Spannungsmessung fließt praktisch kein Strom
@@ -201,6 +213,13 @@ function stepNeedle(dt) {
   }
 }
 
+// Erklärmodus: Elektron wandert entlang des Stabs, solange die Lorentzkraft wirkt (bleibt am Ende stehen)
+function stepElectron(dt) {
+  if (!state.explain) return;
+  const max = SWING.BAR_LEN / 2 - EXPLAIN.ELECTRON_MARGIN;
+  electron.x = clamp(electron.x + EXPLAIN.DRIFT * electronForce().x * dt, -max, max);
+}
+
 // Magnet dreht sich gleichmäßig zum eingestellten Winkel und schiebt die Schaukel ggf. vor sich her
 function turnMagnet(dt) {
   const diff = state.angle - state.magnetAngle;
@@ -222,6 +241,7 @@ export function stepPhysics(dt) {
     turnMagnet(h);
     stepSwing(h);
     stepNeedle(h);
+    stepElectron(h);
   }
 }
 
@@ -252,8 +272,14 @@ export function endMagnetDrag() {
 
 const pushAngle = () => (state.longMagnet ? PUSH_ANGLE_LONG : PUSH_ANGLE);
 
-// Schaukel nach vorne auslenken und ruhig loslassen (nur so weit, wie der Magnet es zulässt)
+export function resetElectron() {
+  electron.x = 0;
+}
+
+// Schaukel nach vorne auslenken und ruhig loslassen (nur so weit, wie der Magnet es zulässt);
+// das Elektron startet wieder in der Mitte
 export function pushSwing() {
+  resetElectron();
   swing.dragging = false;
   swing.omega = 0;
   if (state.setup === 'drehbar') {
@@ -290,5 +316,6 @@ export function resetMagnet() {
 export function resetPhysics() {
   stopSwing();
   resetMagnet();
+  resetElectron();
   Object.assign(needle, { pos: 0, vel: 0 });
 }

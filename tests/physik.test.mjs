@@ -178,3 +178,33 @@ test('langer Magnet: Schaukel schwingt weit aus, ohne anzustoßen', () => {
   assert.ok(swingLimits(90)[1] > 0);
   state.longMagnet = false;
 });
+
+// ---------------- Erklärmodus
+
+import { electron, electronForce, resetElectron } from '../js/physik.js';
+
+test('Erklärmodus: Elektron wandert entgegen der Kraft auf positive Ladungen und kehrt beim Zurückschwingen um', () => {
+  Object.assign(state, { setup: 'drehbar', longMagnet: false, northUp: true, angle: 0, magnetAngle: 0, explain: true });
+  resetPhysics();
+  // Stab nach vorne (+z), Feld nach unten (−y): v × B zeigt nach +x, Kraft auf das Elektron nach −x
+  startDrag(0);
+  for (let i = 0; i < 20; i++) { dragTo(rad(0.5 * (i + 1))); stepPhysics(1 / 60); }
+  assert.ok(electronForce().x < 0 || electron.x < 0);
+  assert.ok(electron.x < -0.1, `nach links: ${electron.x}`);
+  assert.ok(emf() > 0, 'zugleich: rechtes Ende ist Pluspol');
+  const left = electron.x;
+  for (let i = 20; i > -20; i--) { dragTo(rad(0.5 * i)); stepPhysics(1 / 60); }
+  endDrag();
+  assert.ok(electron.x > left, 'zurück nach rechts');
+  // Elektron bleibt im Stab
+  startDrag(0);
+  for (let i = 0; i < 600; i++) { dragTo(rad(12) * Math.sin(i / 10)); stepPhysics(1 / 60); assert.ok(Math.abs(electron.x) <= 6.5); }
+  endDrag();
+  resetElectron();
+  assert.equal(electron.x, 0);
+  // ohne Erklärmodus bleibt das Elektron in Ruhe
+  state.explain = false;
+  pushSwing();
+  for (let i = 0; i < 60; i++) stepPhysics(1 / 60);
+  assert.equal(electron.x, 0);
+});

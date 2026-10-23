@@ -218,12 +218,21 @@ export function buildCables() {
     scene.remove(cable);
     cable.geometry.dispose();
   }
+  if (state.explain) {   // im Erklärmodus gibt es weder Messgerät noch Kabel
+    cables = [];
+    return;
+  }
   const right = socketPoint(1), left = socketPoint(-1);
   const route = ROUTES[state.setup](right.y - 2.2);
   cables = [
     makeCable([...from(right), ...route.red, ...intoSocket(SOCKET_PLUS)], mat.cableRed),
     makeCable([...from(left), ...route.black, ...intoSocket(SOCKET_COM)], mat.cableBlack),
   ];
+}
+
+// Messgerät im Erklärmodus ausblenden (die Kabel lässt buildCables dann weg)
+export function setMeterVisible(visible) {
+  meter.visible = visible;
 }
 
 // ---------------- Messgerät drehen

@@ -37,6 +37,23 @@ Zwei Versuche, per Knopf umschaltbar:
   bremst die Schaukel. Bei einem echten Aufbau ist das kaum zu merken; per Gedankenexperiment lässt sich
   die Bremskraft 1000-fach verstärken.
 
+## Erklärung: Elektron im Leiter
+
+Der Knopf „Erklärung: Elektron im Leiter“ blendet alles Störende aus (Stative, Querstange, Halter, Messgerät,
+Kabel, Tisch). Es bleiben der Magnet mit Feldlinien im Spalt und die Schaukel. Der Stab ist dicker und
+durchsichtig; in seiner Mitte sitzt ein (stark vergrößertes) Elektron. Die Zeitlupe ist eingeschaltet, die
+Kamera schaut schräg von vorne auf den Stab. Schaukel (und auf dem Tisch der Magnet) lassen sich weiter ziehen.
+
+- Pfeile am Elektron: Geschwindigkeit v des Leiters (grün), Magnetfeld B (blau), Lorentzkraft F_L auf das
+  Elektron (rot); die Längen wachsen mit v, B und v·B.
+- Das Elektron wandert stark verlangsamt entlang des Stabs, solange die Lorentzkraft wirkt, und bleibt
+  am Stabende stehen. Schwingt die Schaukel zurück, wandert es zurück. „Auslenken und loslassen“ und
+  „Elektron in die Mitte“ setzen es wieder in die Mitte.
+- Rechte Hand zur Drei-Finger-Regel (abschaltbar): Daumen v (Bewegung der positiven Ladungen mit dem Leiter),
+  Zeigefinger B, Mittelfinger Kraft auf eine positive Ladung. Sie dreht sich mit der Bewegungsrichtung.
+  Die Kraft auf das Elektron zeigt entgegengesetzt zum Mittelfinger.
+- Beim Magneten auf dem Tisch zählt die Bewegung des Leiters relativ zum Magneten (Schulmodell).
+
 ## Starten
 
 Die Simulation lädt [three.js](https://threejs.org) aus dem Internet und muss über einen Webserver
@@ -59,6 +76,7 @@ leiterschaukel-induktion/
 │   ├── szene.js        # Renderer, Kamera, Licht, Tisch
 │   ├── aufbau.js       # Stativ, Leiterschaukel, Hufeisenmagnet mit Drehgelenk
 │   ├── messgeraet.js   # Zeigermessgerät und Kabel
+│   ├── erklaerung.js   # Erklärmodus: Elektron, Pfeile v/B/F_L, Hand zur Drei-Finger-Regel
 │   ├── ziehen.js       # Schaukel bzw. Magnet (auf dem Tisch) mit Maus/Finger ziehen
 │   ├── bedienfeld.js   # Knöpfe, Regler, Anzeigen
 │   ├── hilfen.js       # Hilfsfunktionen
@@ -80,7 +98,9 @@ leiterschaukel-induktion/
 - Zeiger: gedämpfter Schwinger (Eigenfrequenz 1,2 Hz, Dämpfungsgrad 0,55), Anschlag bei 108 %.
 - Magnet auf dem Tisch: In U geht die Geschwindigkeit des Stabs relativ zum Magneten ein
   (`relativeVelocity`).
-- Für eine spätere mikroskopische Ansicht liefert `physik.js` Geschwindigkeit des Stabs (`barVelocity`),
+- Erklärmodus: Lorentzkraft pro Ladung auf das Elektron F/e = −(v × B) (`electronForce`); das Elektron
+  wandert mit 330 cm/s pro V/m entlang des Stabs (stark übertrieben, real driften Elektronen sehr langsam).
+- Für die mikroskopische Ansicht liefert `physik.js` Geschwindigkeit des Stabs (`barVelocity`),
   Feld am Stab (`fieldAtBar`) und Spannung (`emf`); der Stab hat in `aufbau.js` eine eigene Gruppe
   (`swingGroup`/`bar`), an die sich Elektronen anhängen lassen.
 

@@ -3,6 +3,11 @@
 // ------------------------------------------------------------------
 import * as THREE from 'three';
 
+// Farben der Pfeile im Erklärmodus (wie bei der Drei-Finger-Regel im Schienenversuch)
+export const COLOR_V = '#2e7d32';    // Geschwindigkeit v (Daumen)
+export const COLOR_B = '#1565c0';    // Magnetfeld B (Zeigefinger)
+export const COLOR_F = '#c62828';    // Kraft F (Mittelfinger)
+
 export const mat = {
   table: new THREE.MeshStandardMaterial({ color: 0xc8a27a, roughness: 0.8 }),
   standBase: new THREE.MeshStandardMaterial({ color: 0x2f3a46, metalness: 0.4, roughness: 0.5 }),
@@ -19,5 +24,7 @@ export const mat = {
   knob: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.4 }),
   needle: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 }),
   cableRed: new THREE.MeshStandardMaterial({ color: 0xc62828, roughness: 0.5 }),
+  skin: new THREE.MeshStandardMaterial({ color: 0xe8b98f, roughness: 0.65 }),
+  electron: new THREE.MeshStandardMaterial({ color: 0x1e88e5, emissive: 0x0d47a1, emissiveIntensity: 0.6, roughness: 0.3 }),
   cableBlack: new THREE.MeshStandardMaterial({ color: 0x26292d, roughness: 0.5 }),
 };

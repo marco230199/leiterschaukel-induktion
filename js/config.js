@@ -81,6 +81,19 @@ export const DRAG_MAX_OMEGA = 7;               // ... höchstens mit dieser Wink
 export const PUSH_ANGLE = 15;                  // „Auslenken und loslassen“: Startwinkel in Grad (nach vorne)
 export const PUSH_ANGLE_LONG = 25;             // ... beim langen Magneten
 
+// Erklärmodus „Elektron im Leiter“: dickerer, durchsichtiger Stab mit einem Elektron. Das Elektron wandert
+// stark verlangsamt entlang des Stabs: Geschwindigkeit = DRIFT · (Lorentzkraft pro Ladung in V/m).
+export const EXPLAIN = {
+  BAR_R: 1.2,                 // Radius des Stabs im Erklärmodus (auch für Anschläge)
+  ELECTRON_R: 0.6,
+  DRIFT: 330,                 // in cm/s pro V/m
+  ELECTRON_MARGIN: 1,         // Elektron bleibt so weit vor dem Stabende stehen
+  ARROW_V: 25,                // Pfeillänge in cm pro m/s
+  ARROW_F: 200,               // Pfeillänge in cm pro V/m
+  ARROW_B: 6,                 // Pfeillänge für das volle Feld
+  ARROW_MAX: 12,
+};
+
 // Zeigermessgerät: Zeiger als gedämpfter Schwinger (Eigenfrequenz, Dämpfungsgrad)
 export const METER = {
   FREQ: 1.2,                  // in Hz

@@ -4,38 +4,43 @@
 // die mikroskopische Ansicht (Elektronen im Stab) angehängt werden.
 // ------------------------------------------------------------------
 import * as THREE from 'three';
-import { AXIS_Y, PIVOT_Y, SWING, STAND, MAGNET, MAGNET_LONG, axisHeight } from './config.js';
+import { AXIS_Y, PIVOT_Y, SWING, STAND, MAGNET, MAGNET_LONG, EXPLAIN, axisHeight } from './config.js';
 import { state } from './state.js';
 import { swing, magnetMotion } from './physik.js';
 import { addMesh, makeLabel, textTexture } from './hilfen.js';
-import { mat } from './materialien.js';
+import { mat, COLOR_B } from './materialien.js';
 import { scene } from './szene.js';
 
 const rod = (radius, length, material, parent) => addMesh(new THREE.CylinderGeometry(radius, radius, length, 24), material, parent);
 
 // ---------------- Stativ: zwei Stangen auf Fußplatten, Querstange mit Aufhängungen und Buchsen
 // Querstange, Muffen und Schaukel bilden eine Gruppe, die je nach Versuch höher oder tiefer eingespannt wird.
+// Stangen, Querstange, Muffen und Buchsen werden im Erklärmodus ausgeblendet (stands, rigDecor).
 const rig = new THREE.Group();
 scene.add(rig);
+const stands = new THREE.Group();
+scene.add(stands);
+const rigDecor = new THREE.Group();
+rig.add(rigDecor);
 
 for (const side of [-1, 1]) {
   const x = side * STAND.X;
-  const base = addMesh(new THREE.BoxGeometry(5, 1.2, 18), mat.standBase, scene);
+  const base = addMesh(new THREE.BoxGeometry(5, 1.2, 18), mat.standBase, stands);
   base.position.set(x, 0.6, 0);
-  const pole = rod(STAND.R, STAND.TOP - 1.2, mat.rod, scene);
+  const pole = rod(STAND.R, STAND.TOP - 1.2, mat.rod, stands);
   pole.position.set(x, 1.2 + (STAND.TOP - 1.2) / 2, 0);
-  const sleeve = addMesh(new THREE.BoxGeometry(2.6, 2.6, 2.6), mat.clamp, rig);   // Muffe
+  const sleeve = addMesh(new THREE.BoxGeometry(2.6, 2.6, 2.6), mat.clamp, rigDecor);   // Muffe
   sleeve.position.set(x, PIVOT_Y, 0);
 }
-const crossbar = rod(0.5, 2 * STAND.X, mat.rod, rig);
+const crossbar = rod(0.5, 2 * STAND.X, mat.rod, rigDecor);
 crossbar.rotation.z = Math.PI / 2;
 crossbar.position.set(0, PIVOT_Y, 0);
 
 // Isolierte Aufhängung je Bügel mit Buchse (links schwarz, rechts rot) für die Kabel zum Messgerät
 for (const side of [-1, 1]) {
-  const block = addMesh(new THREE.BoxGeometry(4, 2.2, 2.2), mat.insulator, rig);
+  const block = addMesh(new THREE.BoxGeometry(4, 2.2, 2.2), mat.insulator, rigDecor);
   block.position.set(side * (SWING.HANGER_X + 1), PIVOT_Y, 0);
-  const socket = rod(0.55, 1.2, side > 0 ? mat.cableRed : mat.cableBlack, rig);
+  const socket = rod(0.55, 1.2, side > 0 ? mat.cableRed : mat.cableBlack, rigDecor);
   socket.position.set(side * (SWING.HANGER_X + 2), PIVOT_Y + 1.6, 0);
 }
 // Steckerpunkt der Buchse (side −1 links, +1 rechts) in Weltkoordinaten
@@ -145,7 +150,25 @@ function buildBody({ Z_IN, Z_OPEN }) {
   const pointer = addMesh(new THREE.BoxGeometry(0.12, 0.3, 4), pointerMat, holderArm);   // Zeiger der Winkelskala
   pointer.position.set(MAGNET.HOLDER_X + 1.12, 0, -2);
 
-  return { group, upperLeg, lowerLeg, upperLabels, lowerLabels, holderArm, targets: [yoke, upperLeg, lowerLeg] };
+  // Feldlinien im Spalt (nur im Erklärmodus): Pfeile vom oberen zum unteren Pol; bei Südpol oben wird die
+  // Gruppe an der Waagrechten gespiegelt (scale.y = −1), dann zeigen die Spitzen nach oben.
+  const fieldLines = new THREE.Group();
+  group.add(fieldLines);
+  const lineMat = new THREE.MeshBasicMaterial({ color: COLOR_B, transparent: true, opacity: 0.45, depthWrite: false });
+  lineMat.userData.baseOpacity = 0.45;
+  const HEAD = 0.9;
+  for (let z = Z_IN + 1.5; z <= Z_OPEN - 0.5; z += 3) {
+    for (const x of [-2, 2]) {
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2 * inner - HEAD, 8), lineMat);
+      shaft.position.set(x, HEAD / 2, z);
+      const head = new THREE.Mesh(new THREE.ConeGeometry(0.3, HEAD, 12), lineMat);
+      head.rotation.x = Math.PI;
+      head.position.set(x, -inner + HEAD / 2, z);
+      fieldLines.add(shaft, head);
+    }
+  }
+
+  return { group, upperLeg, lowerLeg, upperLabels, lowerLabels, holderArm, fieldLines, targets: [yoke, upperLeg, lowerLeg] };
 }
 const bodies = { short: buildBody(MAGNET), long: buildBody(MAGNET_LONG) };
 const body = () => (state.longMagnet ? bodies.long : bodies.short);
@@ -233,9 +256,20 @@ export function applySetup() {
   bodies.short.group.visible = !state.longMagnet;
   bodies.long.group.visible = state.longMagnet;
   magnetTargets.splice(0, magnetTargets.length, ...body().targets);
-  const rotatable = state.setup === 'drehbar';
-  for (const b of Object.values(bodies)) b.holderArm.visible = rotatable;
-  holderStand.visible = rotatable;
+  // Erklärmodus: nur Magnet und Schaukel; Stab dicker und durchsichtig, Feldlinien im Spalt
+  const showHolder = state.setup === 'drehbar' && !state.explain;
+  for (const b of Object.values(bodies)) {
+    b.holderArm.visible = showHolder;
+    b.fieldLines.visible = state.explain;
+  }
+  holderStand.visible = showHolder;
+  stands.visible = rigDecor.visible = !state.explain;
+  const barScale = state.explain ? EXPLAIN.BAR_R / SWING.BAR_R : 1;
+  bar.scale.set(barScale, 1, barScale);   // Zylinderachse = lokale y-Achse
+  mat.copper.transparent = state.explain;
+  mat.copper.opacity = state.explain ? 0.3 : 1;
+  mat.copper.depthWrite = !state.explain;
+  mat.copper.needsUpdate = true;
   syncApparatus();
 }
 
@@ -247,6 +281,7 @@ export function applyMagnetPoles() {
     for (const label of upperLabels) label.material.map = textTexture(state.northUp ? 'N' : 'S');
     for (const label of lowerLabels) label.material.map = textTexture(state.northUp ? 'S' : 'N');
   }
+  for (const b of Object.values(bodies)) b.fieldLines.scale.y = state.northUp ? 1 : -1;
 }
 
 // Überblenden beim Umdrehen des Magneten
@@ -258,7 +293,7 @@ export function setMagnetOpacity(opacity) {
       obj.material.transparent = transparent;
       obj.material.needsUpdate = true;
     }
-    obj.material.opacity = opacity;
+    obj.material.opacity = opacity * (obj.material.userData.baseOpacity ?? 1);   // Feldlinien bleiben durchscheinend
     obj.castShadow = opacity > 0.5;
   });
 }

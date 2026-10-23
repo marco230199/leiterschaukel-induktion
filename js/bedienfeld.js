@@ -3,14 +3,18 @@
 // ------------------------------------------------------------------
 import { METER } from './config.js';
 import { state } from './state.js';
-import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet } from './physik.js';
+import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron } from './physik.js';
 import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus } from './aufbau.js';
-import { updateMeterFace, buildCables, turnMeterTowards } from './messgeraet.js';
+import { updateMeterFace, buildCables, turnMeterTowards, setMeterVisible } from './messgeraet.js';
+import { explainView } from './erklaerung.js';
 import { cancelDrag } from './ziehen.js';
-import { resetView, camera } from './szene.js';
+import { resetView as resetSetupView, camera, controls, table } from './szene.js';
 import { formatNumber } from './hilfen.js';
 
 const $ = id => document.getElementById(id);
+
+// Startansicht: im Erklärmodus nah am Stab, sonst die Ansicht des Versuchs
+const resetView = () => (state.explain ? explainView(controls) : resetSetupView());
 const unit = () => (state.meterMode === 'U' ? 'mV' : 'mA');
 
 // Magnet umdrehen: ausblenden, Pole tauschen, wieder einblenden
@@ -19,6 +23,13 @@ const flip = { active: false, t: 0, swapped: false };
 
 function updateUi() {
   const rotatable = state.setup === 'drehbar';
+  $('explainBtn').textContent = state.explain ? 'Zurück zum Versuch' : 'Erklärung: Elektron im Leiter';
+  $('explainBtn').classList.toggle('active', state.explain);
+  $('explainBtn').setAttribute('aria-pressed', String(state.explain));
+  $('explainBox').hidden = !state.explain;
+  $('explainHandInfo').hidden = !state.showExplainHand;
+  $('meterSection').hidden = state.explain;
+  $('slowCheck').checked = state.slowMotion;
   for (const [id, setup] of [['setupDrehbarBtn', 'drehbar'], ['setupTischBtn', 'tisch']]) {
     $(id).classList.toggle('active', state.setup === setup);
     $(id).setAttribute('aria-pressed', String(state.setup === setup));
@@ -83,6 +94,22 @@ function finishFlip() {
   setMagnetOpacity(1);
 }
 
+// Erklärmodus ein/aus: Stative, Messgerät, Kabel und Tisch weg, Stab durchsichtig mit Elektron in der Mitte,
+// Zeitlupe an, Kamera nah an den Stab
+function setExplain(on) {
+  cancelDrag();
+  state.explain = on;
+  if (on) state.slowMotion = true;
+  stopSwing();
+  resetElectron();
+  setMeterVisible(!on);
+  table.visible = !on;
+  applySetup();
+  buildCables();
+  resetView();
+  updateUi();
+}
+
 // Kurzen oder langen Magneten einsetzen: Schaukel in Ruhe, Magnet in Grundlage; beim drehbaren Magneten
 // ändert sich die Höhe der Drehachse, deshalb Querstange, Kabel und Ansicht neu
 function setLongMagnet(long) {
@@ -123,6 +150,7 @@ export function initUi() {
   $('brakeCheck').checked = state.brakeBoost;
   $('valueCheck').checked = state.showValue;
   $('longCheck').checked = state.longMagnet;
+  $('explainHandCheck').checked = state.showExplainHand;
   $('angleSlider').value = state.angle;
 
   $('resetView').addEventListener('click', resetView);
@@ -144,6 +172,9 @@ export function initUi() {
     updateUi();
   });
   $('longCheck').addEventListener('change', e => setLongMagnet(e.target.checked));
+  $('explainBtn').addEventListener('click', () => setExplain(!state.explain));
+  $('explainHandCheck').addEventListener('change', e => { state.showExplainHand = e.target.checked; updateUi(); });
+  $('electronResetBtn').addEventListener('click', resetElectron);
   $('angleSlider').addEventListener('input', e => { state.angle = Number(e.target.value); updateUi(); });
   $('modeUBtn').addEventListener('click', () => { state.meterMode = 'U'; updateUi(); });
   $('modeIBtn').addEventListener('click', () => { state.meterMode = 'I'; updateUi(); });

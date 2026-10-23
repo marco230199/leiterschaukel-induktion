@@ -47,7 +47,7 @@ Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, n
 sun.shadow.bias = -0.0005;
 scene.add(sun);
 
-const table = addMesh(new THREE.BoxGeometry(170, 4, 120), mat.table, scene);
+export const table = addMesh(new THREE.BoxGeometry(170, 4, 120), mat.table, scene);
 table.position.set(10, -2, -5);
 
 // Größe anpassen; im Hochformat das Sichtfeld vergrößern, damit der ganze Aufbau sichtbar bleibt

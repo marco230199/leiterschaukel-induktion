@@ -12,4 +12,6 @@ export const state = {
   brakeBoost: false,  // Gedankenexperiment: Bremskraft bei Strommessung stark verstärkt
   slowMotion: false,
   showValue: false,   // Messwert zusätzlich als Zahl
+  explain: false,     // Erklärmodus: nur Magnet und Schaukel, Elektron im Leiter mit Pfeilen und Hand
+  showExplainHand: true,
 };

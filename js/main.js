@@ -8,6 +8,7 @@ import { stepPhysics } from './physik.js';
 import { syncApparatus } from './aufbau.js';
 import { syncMeter } from './messgeraet.js';
 import { initUi, animateFlip, updateValue } from './bedienfeld.js';
+import { syncExplain } from './erklaerung.js';
 import './ziehen.js';
 
 initUi();
@@ -21,6 +22,7 @@ renderer.setAnimationLoop(() => {
   stepPhysics(state.slowMotion ? dt * SLOW_MOTION : dt);
   syncApparatus();
   syncMeter();
+  syncExplain(dt);
   updateValue();
   controls.update();
   renderer.render(scene, camera);
