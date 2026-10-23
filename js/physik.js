@@ -272,9 +272,11 @@ function restingTheta() {
   return 0;
 }
 
+// Schaukel anhalten; der Zeiger springt sofort auf 0
 export function stopSwing() {
   Object.assign(swing, { theta: 0, omega: 0, dragging: false, target: 0 });
   if (state.setup === 'tisch') swing.theta = restingTheta();
+  Object.assign(needle, { pos: 0, vel: 0 });
 }
 
 export function resetMagnet() {

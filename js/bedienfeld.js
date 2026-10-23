@@ -5,9 +5,9 @@ import { METER } from './config.js';
 import { state } from './state.js';
 import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet } from './physik.js';
 import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus } from './aufbau.js';
-import { updateMeterFace, buildCables } from './messgeraet.js';
+import { updateMeterFace, buildCables, turnMeterTowards } from './messgeraet.js';
 import { cancelDrag } from './ziehen.js';
-import { resetView } from './szene.js';
+import { resetView, camera } from './szene.js';
 import { formatNumber } from './hilfen.js';
 
 const $ = id => document.getElementById(id);
@@ -117,6 +117,7 @@ export function initUi() {
   });
   $('pushBtn').addEventListener('click', pushSwing);
   $('stopBtn').addEventListener('click', stopSwing);
+  $('meterTurnBtn').addEventListener('click', () => turnMeterTowards(camera.position));
   $('slowCheck').addEventListener('change', e => { state.slowMotion = e.target.checked; });
   $('flipBtn').addEventListener('click', () => {
     if (flip.active) return;

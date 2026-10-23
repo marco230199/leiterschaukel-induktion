@@ -10,14 +10,18 @@ import { mat } from './materialien.js';
 import { scene } from './szene.js';
 import { socketPoint } from './aufbau.js';
 
+// Das Messgerät steht auf dem Tisch und lässt sich um die senkrechte Achse drehen (Ziehen oder Knopf)
 const meter = new THREE.Group();
 meter.position.set(40, 0, 8);
-meter.rotation.y = -0.3;            // leicht zum Betrachter gedreht
+meter.rotation.y = -0.3;            // zu Beginn leicht zum Betrachter gedreht
 scene.add(meter);
+const CABLE_CLEARANCE = 20;         // Kabel laufen in diesem Abstand um das Gerät herum (Gehäuseecken: 16,2 cm)
 
 const W = 30, H = 27, D = 12, FRONT = D / 2;
 const housing = addMesh(new THREE.BoxGeometry(W, H, D), mat.housing, meter);
 housing.position.y = H / 2 + 0.8;
+// Flächen, an denen man das Messgerät zum Drehen greifen kann
+export const meterTargets = [housing];
 for (const x of [-12, 12]) for (const z of [-4, 4]) {
   const foot = addMesh(new THREE.CylinderGeometry(1, 1, 0.8, 16), mat.knob, meter);
   foot.position.set(x, 0.4, z);
@@ -86,6 +90,7 @@ function drawDial() {
 const dial = new THREE.Mesh(new THREE.PlaneGeometry(DIAL_W, DIAL_H), new THREE.MeshBasicMaterial({ map: dialTexture }));
 dial.position.set(0, DIAL_Y, FRONT + 0.02);
 meter.add(dial);
+meterTargets.push(dial);
 // Rahmen um die Skala
 for (const [w, h, x, y] of [[DIAL_W + 1, 0.5, 0, DIAL_Y + DIAL_H / 2 + 0.25], [DIAL_W + 1, 0.5, 0, DIAL_Y - DIAL_H / 2 - 0.25],
   [0.5, DIAL_H, -DIAL_W / 2 - 0.25, DIAL_Y], [0.5, DIAL_H, DIAL_W / 2 + 0.25, DIAL_Y]]) {
@@ -167,13 +172,28 @@ function makeCable(points, material) {
   return addMesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(samples), 300, 0.35, 12, false), material, scene);
 }
 
-// Letztes Stück: über den Tisch nach vorne und von vorne in die Buchse
+// Letztes Stück: auf dem Tisch im Bogen um das Messgerät herum bis vor die Buchse, dann von vorne hinein.
+// Die Kabel kommen von links (vom Stativ). Zwischen Messgerät und Stativ (links, um 180°) ist kein Platz;
+// deshalb laufen sie entweder vorne (Eintritt bei 150°) oder hinten (−150°) herum – je nachdem, was kürzer ist.
+// Winkel um die Gerätemitte: 0° rechts, 90° vorne, ±180° links (Richtung Stativ), −90° hinten.
 function intoSocket(local) {
   meter.updateMatrixWorld();
   const front = new THREE.Vector3(0, 0, 1).applyQuaternion(meter.quaternion);
   const socket = meter.localToWorld(local.clone()).addScaledVector(front, 1.2);
   const at = d => socket.clone().addScaledVector(front, d);
-  return [[...at(6).setY(0.4).toArray()], [...at(3).setY(socket.y - 2.5).toArray()], socket.toArray()];
+  const center = meter.position, deg = THREE.MathUtils.degToRad;
+  const approach = at(6);
+  const target = Math.atan2(approach.z - center.z, approach.x - center.x);
+  const tail = [[...approach.setY(0.4).toArray()], [...at(3).setY(socket.y - 2.5).toArray()], socket.toArray()];
+  if (Math.abs(target) > deg(150)) return tail;   // Buchsen zeigen zum Stativ: direkt hinein
+  const viaFront = deg(150) - (target > deg(150) ? target - 2 * Math.PI : target);   // im Uhrzeigersinn
+  const viaBack = (target < deg(-150) ? target + 2 * Math.PI : target) + deg(150);   // gegen den Uhrzeigersinn
+  const [start, delta] = viaFront <= viaBack ? [deg(150), -viaFront] : [deg(-150), viaBack];
+  const point = a => [center.x + CABLE_CLEARANCE * Math.cos(a), 0.4, center.z + CABLE_CLEARANCE * Math.sin(a)];
+  const steps = Math.max(0, Math.ceil(Math.abs(delta) / deg(25)) - 1);
+  const arc = [point(start)];
+  for (let i = 1; i <= steps; i++) arc.push(point(start + delta * i / (steps + 1)));
+  return [...arc, ...tail];
 }
 
 const from = p => [p.toArray(), [p.x * 1.05, p.y + 2.2, 0.4]];
@@ -183,14 +203,12 @@ const from = p => [p.toArray(), [p.x * 1.05, p.y + 2.2, 0.4]];
 // hinten, damit der verschobene Magnet nicht darüber liegt.
 const ROUTES = {
   drehbar: P => ({
-    red: [[12.5, P + 3.5, 2], [20, P - 8, 7], [24, 12, 12], [27, 0.4, 16]],
-    black: [[-13, P + 3, -2], [-21, P - 10, -7], [-23, 8, -10], [-18, 0.4, -15], [2, 0.4, -18], [22.8, 0.4, -12],
-      [22.8, 0.4, 3], [22.5, 0.4, 14]],
+    red: [[12.5, P + 3.5, 2], [20, P - 8, 7], [22, 12, 13]],
+    black: [[-13, P + 3, -2], [-21, P - 10, -7], [-23, 8, -10], [-18, 0.4, -15], [2, 0.4, -18], [22.8, 0.4, -12]],
   }),
   tisch: P => ({
-    red: [[12.5, P + 3.5, 2], [20, P - 8, 7], [24, 8, 12], [27, 0.4, 16]],
-    black: [[-13, P + 3, -2], [-21, P - 10, -7], [-23, 6, -14], [-20, 0.4, -30], [0, 0.4, -44], [22.8, 0.4, -36],
-      [22.8, 0.4, 3], [22.5, 0.4, 14]],
+    red: [[12.5, P + 3.5, 2], [20, P - 8, 7], [22, 8, 13]],
+    black: [[-13, P + 3, -2], [-21, P - 10, -7], [-23, 6, -14], [-20, 0.4, -30], [0, 0.4, -44], [22.8, 0.4, -36]],
   }),
 };
 
@@ -206,4 +224,18 @@ export function buildCables() {
     makeCable([...from(right), ...route.red, ...intoSocket(SOCKET_PLUS)], mat.cableRed),
     makeCable([...from(left), ...route.black, ...intoSocket(SOCKET_COM)], mat.cableBlack),
   ];
+}
+
+// ---------------- Messgerät drehen
+
+export const meterAngle = () => meter.rotation.y;
+
+export function setMeterAngle(angle) {
+  meter.rotation.y = Math.atan2(Math.sin(angle), Math.cos(angle));
+  buildCables();
+}
+
+// Skala zur Kamera ausrichten (nur die Drehung um die senkrechte Achse)
+export function turnMeterTowards(point) {
+  setMeterAngle(Math.atan2(point.x - meter.position.x, point.z - meter.position.z));
 }

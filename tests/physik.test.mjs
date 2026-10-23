@@ -142,3 +142,15 @@ test('Tisch: Magnet nach vorne schieben – der Bogen schiebt die Schaukel mit, 
   assert.ok(!collides(swing.theta, 0, magnetMotion.z), 'Anhalten: Schaukel lehnt am Magneten');
   state.setup = 'drehbar';
 });
+
+test('Anhalten: Zeiger springt sofort auf 0', () => {
+  Object.assign(state, { setup: 'drehbar', angle: 0, magnetAngle: 0, meterMode: 'U', range: 3 });
+  resetPhysics();
+  pushSwing();
+  for (let i = 0; i < 20; i++) stepPhysics(1 / 60);
+  assert.ok(Math.abs(needle.pos) > 0.05);
+  stopSwing();
+  assert.equal(needle.pos, 0);
+  stepPhysics(1 / 60);
+  assert.equal(needle.pos, 0);
+});
