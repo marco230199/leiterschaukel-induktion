@@ -19,6 +19,30 @@
     <button id="resetView" type="button">Ansicht zurücksetzen</button>
   </div>
 
+  <!-- Bedienfeld des Erklärmodus: erscheint nur dort, links über der Szene -->
+  <aside class="popup" id="explainPanel" aria-label="Erklärung: Elektron im Leiter" hidden>
+    <h2>Elektron im Leiter</h2>
+    <p class="status">Das Elektron bewegt sich mit dem Leiter durch das Magnetfeld. Auf die bewegte Ladung
+      wirkt die Lorentzkraft und verschiebt das Elektron entlang des Leiters.</p>
+    <button id="pauseBtn" class="power" type="button" aria-pressed="false">Pause</button>
+    <p class="status" id="pauseInfo" hidden>Pause: Die Bewegung ist angehalten, die Pfeile zeigen den Augenblick.</p>
+    <div class="toggles" role="group" aria-label="Anzeigen">
+      <button id="showVBtn" type="button"><span class="dot" style="background:#2e7d32"></span>v</button>
+      <button id="showBBtn" type="button"><span class="dot" style="background:#1565c0"></span>B</button>
+      <button id="showFBtn" type="button"><span class="dot" style="background:#c62828"></span>F_L</button>
+      <button id="showHandBtn" type="button">Hand</button>
+    </div>
+    <ul class="legend">
+      <li><span class="dot" style="background:#2e7d32"></span>v: Geschwindigkeit des Leiters</li>
+      <li><span class="dot" style="background:#1565c0"></span>B: Magnetfeld (von N nach S)</li>
+      <li><span class="dot" style="background:#c62828"></span>F_L: Lorentzkraft auf das Elektron</li>
+    </ul>
+    <p class="status" id="explainHandInfo">Rechte Hand: Daumen v (Bewegung der positiven Ladungen mit dem Leiter),
+      Zeigefinger B, Mittelfinger Kraft auf eine positive Ladung. Das Elektron ist negativ geladen: Die Kraft
+      auf das Elektron zeigt entgegengesetzt zum Mittelfinger.</p>
+    <button id="electronResetBtn" type="button">Elektron in die Mitte</button>
+  </aside>
+
   <aside class="panel">
     <section>
       <h2>Versuch</h2>
@@ -30,20 +54,6 @@
     <section>
       <h2>Erklärung</h2>
       <button id="explainBtn" type="button" aria-pressed="false">Erklärung: Elektron im Leiter</button>
-      <div id="explainBox" hidden>
-        <p class="status">Das Elektron bewegt sich mit dem Leiter durch das Magnetfeld. Auf die bewegte Ladung
-          wirkt die Lorentzkraft und verschiebt das Elektron entlang des Leiters.</p>
-        <ul class="legend">
-          <li><span class="dot" style="background:#2e7d32"></span>v: Geschwindigkeit des Leiters</li>
-          <li><span class="dot" style="background:#1565c0"></span>B: Magnetfeld (von N nach S)</li>
-          <li><span class="dot" style="background:#c62828"></span>F_L: Lorentzkraft auf das Elektron</li>
-        </ul>
-        <label class="check"><input id="explainHandCheck" type="checkbox" /> Hand zur Drei-Finger-Regel</label>
-        <p class="status" id="explainHandInfo">Rechte Hand: Daumen v (Bewegung der positiven Ladungen mit dem Leiter),
-          Zeigefinger B, Mittelfinger Kraft auf eine positive Ladung. Das Elektron ist negativ geladen: Die Kraft
-          auf das Elektron zeigt entgegengesetzt zum Mittelfinger.</p>
-        <button id="electronResetBtn" type="button">Elektron in die Mitte</button>
-      </div>
     </section>
     <section>
       <h2>Leiterschaukel</h2>

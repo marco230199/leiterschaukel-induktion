@@ -19,7 +19,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   animateFlip(dt);
-  stepPhysics(state.slowMotion ? dt * SLOW_MOTION : dt);
+  if (!state.paused) stepPhysics(state.slowMotion ? dt * SLOW_MOTION : dt);   // Pause nur im Erklärmodus
   syncApparatus();
   syncMeter();
   syncExplain(dt);

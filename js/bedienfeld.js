@@ -12,6 +12,7 @@ import { resetView as resetSetupView, camera, controls, table } from './szene.js
 import { formatNumber } from './hilfen.js';
 
 const $ = id => document.getElementById(id);
+const EXPLAIN_TOGGLES = [['showVBtn', 'showV'], ['showBBtn', 'showB'], ['showFBtn', 'showF'], ['showHandBtn', 'showExplainHand']];
 
 // Startansicht: im Erklärmodus nah am Stab, sonst die Ansicht des Versuchs
 const resetView = () => (state.explain ? explainView(controls) : resetSetupView());
@@ -26,8 +27,13 @@ function updateUi() {
   $('explainBtn').textContent = state.explain ? 'Zurück zum Versuch' : 'Erklärung: Elektron im Leiter';
   $('explainBtn').classList.toggle('active', state.explain);
   $('explainBtn').setAttribute('aria-pressed', String(state.explain));
-  $('explainBox').hidden = !state.explain;
+  $('explainPanel').hidden = !state.explain;
   $('explainHandInfo').hidden = !state.showExplainHand;
+  $('pauseBtn').textContent = state.paused ? 'Weiter' : 'Pause';
+  $('pauseBtn').classList.toggle('on', state.paused);
+  $('pauseBtn').setAttribute('aria-pressed', String(state.paused));
+  $('pauseInfo').hidden = !state.paused;
+  for (const [id, key] of EXPLAIN_TOGGLES) $(id).setAttribute('aria-pressed', String(state[key]));
   $('meterSection').hidden = state.explain;
   $('slowCheck').checked = state.slowMotion;
   for (const [id, setup] of [['setupDrehbarBtn', 'drehbar'], ['setupTischBtn', 'tisch']]) {
@@ -99,6 +105,7 @@ function finishFlip() {
 function setExplain(on) {
   cancelDrag();
   state.explain = on;
+  state.paused = false;
   if (on) state.slowMotion = true;
   stopSwing();
   resetElectron();
@@ -150,7 +157,6 @@ export function initUi() {
   $('brakeCheck').checked = state.brakeBoost;
   $('valueCheck').checked = state.showValue;
   $('longCheck').checked = state.longMagnet;
-  $('explainHandCheck').checked = state.showExplainHand;
   $('angleSlider').value = state.angle;
 
   $('resetView').addEventListener('click', resetView);
@@ -173,7 +179,12 @@ export function initUi() {
   });
   $('longCheck').addEventListener('change', e => setLongMagnet(e.target.checked));
   $('explainBtn').addEventListener('click', () => setExplain(!state.explain));
-  $('explainHandCheck').addEventListener('change', e => { state.showExplainHand = e.target.checked; updateUi(); });
+  for (const [id, key] of EXPLAIN_TOGGLES) $(id).addEventListener('click', () => { state[key] = !state[key]; updateUi(); });
+  $('pauseBtn').addEventListener('click', () => {
+    cancelDrag();
+    state.paused = !state.paused;
+    updateUi();
+  });
   $('electronResetBtn').addEventListener('click', resetElectron);
   $('angleSlider').addEventListener('input', e => { state.angle = Number(e.target.value); updateUi(); });
   $('modeUBtn').addEventListener('click', () => { state.meterMode = 'U'; updateUi(); });

@@ -134,11 +134,11 @@ function buildHand() {
   fingerArrow(v3(2.7, 2, 0), v3(2.7, 16, 0), COLOR_B);
   fingerArrow(v3(0.9, 4.4, 1), v3(0.9, 4.4, 13), COLOR_F);
   const tags = [
-    ['Daumen: v', COLOR_V, v3(15.5, -2, 0.5), v3(1, 0, 0)],
-    ['Zeigefinger: B', COLOR_B, v3(2.7, 17.5, 0), v3(0, 1, 0)],
-    ['Mittelfinger: F auf + Ladung', COLOR_F, v3(0.9, 4.4, 14.5), v3(0, 0, 1)],
+    ['Daumen: v', COLOR_V, v3(16.5, -2, 0.5), v3(1, 0, 0)],
+    ['Zeigefinger: B', COLOR_B, v3(2.7, 18, 0), v3(0, 1, 0)],
+    ['Mittelfinger: F auf +', COLOR_F, v3(0.9, 4.4, 17), v3(0, 0, 1)],
   ].map(([text, color, tip, dir]) => {
-    const sprite = makeTag(text, color, 3);
+    const sprite = makeTag(text, color, 2.5);
     sprite.position.copy(tip);
     hand.add(sprite);
     return { sprite, tip, dir };
@@ -197,7 +197,7 @@ export function syncExplain(dt) {
   const justOn = on && !wasOn;
   wasOn = on;
   electronMesh.visible = on;
-  for (const arrow of Object.values(arrows)) arrow.group.visible = on;
+  if (!on) for (const arrow of Object.values(arrows)) arrow.group.visible = false;
   hand.visible = on && state.showExplainHand;
   if (!on) return;
 
@@ -207,9 +207,10 @@ export function syncExplain(dt) {
 
   const v = relativeVelocity(), B = fieldAtBar(), F = electronForce();
   const len = (vec, scale) => Math.min(EXPLAIN.ARROW_MAX, Math.hypot(vec.x, vec.y, vec.z) * scale);
-  setArrow(arrows.v, origin, v3(v.x, v.y, v.z), len(v, EXPLAIN.ARROW_V));
-  setArrow(arrows.B, origin, v3(B.x, B.y, B.z), len(B, EXPLAIN.ARROW_B / 0.1));
-  setArrow(arrows.F, origin, v3(F.x, F.y, F.z), len(F, EXPLAIN.ARROW_F));
+  // Pfeile einzeln abschaltbar; in der Pause zeigen sie den eingefrorenen Augenblick
+  setArrow(arrows.v, origin, v3(v.x, v.y, v.z), state.showV ? len(v, EXPLAIN.ARROW_V) : 0);
+  setArrow(arrows.B, origin, v3(B.x, B.y, B.z), state.showB ? len(B, EXPLAIN.ARROW_B / 0.1) : 0);
+  setArrow(arrows.F, origin, v3(F.x, F.y, F.z), state.showF ? len(F, EXPLAIN.ARROW_F) : 0);
 
   if (hand.visible) {
     const axisY = axisHeight(state.setup, state.longMagnet);

@@ -43,6 +43,12 @@ Der Knopf „Erklärung: Elektron im Leiter“ blendet alles Störende aus (Stat
 Kabel, Tisch). Es bleiben der Magnet mit Feldlinien im Spalt und die Schaukel. Der Stab ist dicker und
 durchsichtig; in seiner Mitte sitzt ein (stark vergrößertes) Elektron. Die Zeitlupe ist eingeschaltet, die
 Kamera schaut schräg von vorne auf den Stab. Schaukel (und auf dem Tisch der Magnet) lassen sich weiter ziehen.
+Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
+
+- **Pause / Weiter:** friert die Bewegung ein (Schaukel, Magnet, Elektron). Die Pfeile zeigen den Augenblick,
+  so bleibt z. B. der Geschwindigkeitspfeil v sichtbar, obwohl nichts mehr läuft.
+- **v, B, F_L, Hand:** Pfeile und Hand einzeln ein- und ausblenden.
+- **Elektron in die Mitte**
 
 - Pfeile am Elektron: Geschwindigkeit v des Leiters (grün), Magnetfeld B (blau), Lorentzkraft F_L auf das
   Elektron (rot); die Längen wachsen mit v, B und v·B.

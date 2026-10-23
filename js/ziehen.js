@@ -45,7 +45,7 @@ const swingAngle = p => Math.atan2(p.z, pivotY() - p.y);
 
 // Erfassungsphase: läuft vor den OrbitControls, die dann für diesen Zug abgeschaltet werden
 canvas.addEventListener('pointerdown', event => {
-  if (drag) return;
+  if (drag || state.paused) return;   // in der Pause bleibt alles stehen
   setRay(event);
   const target = pick();
   if (!target) return;
