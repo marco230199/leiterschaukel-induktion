@@ -31,17 +31,13 @@
     <p class="status" id="pauseInfo" hidden>Pause: Die Bewegung ist angehalten, die Pfeile zeigen den Augenblick.</p>
     <button id="holdBtn" class="state" type="button" aria-pressed="false">Leiter festhalten</button>
     <div id="holdBox" hidden>
-      <p class="status">Der Leiter pendelt nicht. Stelle mit dem Regler (oder durch Ziehen) ein, wohin er fährt –
-        er bewegt sich immer mit der eingestellten Geschwindigkeit.</p>
+      <p class="status">Der Leiter pendelt nicht. Bewege ihn mit dem Regler oder durch Ziehen – lässt du los,
+        bleibt er stehen.</p>
       <label class="slider">
         <span class="row">Lage des Leiters (Winkel) <output id="holdOut">0°</output></span>
         <input id="holdSlider" type="range" step="0.5" value="0" />
       </label>
       <p class="status">links: hinten (zum Bogen) · rechts: vorne (aus dem Magneten)</p>
-      <label class="slider">
-        <span class="row">Geschwindigkeit <output id="holdSpeedOut"></output></span>
-        <input id="holdSpeedSlider" type="range" />
-      </label>
     </div>
     <div class="toggles" role="group" aria-label="Anzeigen">
       <button id="showVBtn" type="button"><span class="dot" style="background:#2e7d32"></span>v</button>

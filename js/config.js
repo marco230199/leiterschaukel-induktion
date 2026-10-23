@@ -92,8 +92,6 @@ export const EXPLAIN = {
   ARROW_F: 200,               // Pfeillänge in cm pro V/m
   ARROW_B: 6,                 // Pfeillänge für das volle Feld
   ARROW_MAX: 12,
-  // Festhalten: Leiter fährt mit fest vorgegebener Winkelgeschwindigkeit (°/s) zur Ziellage (Regler oder Finger)
-  HOLD_SPEED: { min: 5, max: 60, step: 5 },
 };
 
 // Zeigermessgerät: Zeiger als gedämpfter Schwinger (Eigenfrequenz, Dämpfungsgrad)

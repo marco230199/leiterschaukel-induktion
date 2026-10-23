@@ -49,11 +49,8 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
   so bleibt z. B. der Geschwindigkeitspfeil v sichtbar, obwohl nichts mehr läuft.
 - **Zeitlupe:** wie im Bedienfeld rechts (beide Schalter sind gekoppelt).
 - **Leiter festhalten:** Der Leiter pendelt nicht mehr, er bleibt, wo er ist. Mit dem Regler „Lage des
-  Leiters“ (Winkel in Grad, vorne +, hinten −) oder durch Ziehen gibt man das Ziel vor; der Leiter fährt
-  immer gleichmäßig mit der am Regler „Geschwindigkeit“ eingestellten Winkelgeschwindigkeit dorthin
-  (5–60 °/s, Anzeige auch in m/s) – unabhängig davon, wie schnell man schiebt oder zieht. Er fährt nur,
-  solange man Regler bzw. Leiter festhält; beim Loslassen bleibt er sofort stehen (mit den Pfeiltasten
-  fährt er schrittweise). „Auslenken und loslassen“ beendet das Festhalten.
+  Leiters“ (Winkel in Grad, vorne +, hinten −) oder durch Ziehen lässt er sich bewegen; er folgt direkt und
+  bleibt beim Loslassen stehen. „Auslenken und loslassen“ beendet das Festhalten.
 - **v, B, F_L, Hand:** Pfeile und Hand einzeln ein- und ausblenden.
 - **Elektron in die Mitte**
 

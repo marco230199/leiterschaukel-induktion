@@ -1,9 +1,9 @@
 // ------------------------------------------------------------------
 // Bedienfeld: Knöpfe, Regler und Anzeigen
 // ------------------------------------------------------------------
-import { METER, SWING, EXPLAIN, PENDULUM_L } from './config.js';
+import { METER, SWING } from './config.js';
 import { state } from './state.js';
-import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron, setHold, holdTo, stopHold, swing } from './physik.js';
+import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron, setHold, holdTo, swing } from './physik.js';
 import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus } from './aufbau.js';
 import { updateMeterFace, buildCables, turnMeterTowards, setMeterVisible } from './messgeraet.js';
 import { explainView } from './erklaerung.js';
@@ -78,11 +78,6 @@ export function updateHoldSlider() {
   $('holdOut').textContent = (deg < -0.05 ? '−' : '') + formatNumber(Math.abs(deg), 1) + '°';
 }
 
-// Vorgegebene Geschwindigkeit in °/s und als Bahngeschwindigkeit des Stabs in m/s
-function updateHoldSpeed() {
-  const v = PENDULUM_L * state.holdSpeed * Math.PI / 180;
-  $('holdSpeedOut').textContent = `${state.holdSpeed} °/s (${formatNumber(v, 2)} m/s)`;
-}
 
 // Messwert als Zahl (nur sichtbar, wenn eingeschaltet)
 export function updateValue() {
@@ -212,24 +207,11 @@ export function initUi() {
   holdSlider.min = -SWING.MAX_ANGLE;
   holdSlider.max = SWING.MAX_ANGLE;
   holdSlider.addEventListener('input', () => holdTo(Number(holdSlider.value) * Math.PI / 180));
-  const speedSlider = $('holdSpeedSlider');
-  Object.assign(speedSlider, EXPLAIN.HOLD_SPEED, { value: state.holdSpeed });
-  speedSlider.addEventListener('input', () => { state.holdSpeed = Number(speedSlider.value); updateHoldSpeed(); });
-  updateHoldSpeed();
-  // Der Leiter fährt nur, solange man den Regler festhält; beim Loslassen bleibt er sofort stehen
-  // (mit den Pfeiltasten fährt er Schritt für Schritt bis zum jeweiligen Ziel)
-  // (Loslassen wird auf der ganzen Seite abgehört, falls man außerhalb des Reglers loslässt)
-  let sliderPointer = false;
+  // Der Leiter folgt dem Regler direkt und kommt beim Loslassen an der Reglerposition zur Ruhe.
+  // Solange man den Regler bedient, wird er nicht vom Leiter nachgeführt.
   holdSlider.addEventListener('focus', () => { holdSliderActive = true; });
   holdSlider.addEventListener('blur', () => { holdSliderActive = false; });
-  holdSlider.addEventListener('pointerdown', () => { sliderPointer = holdSliderActive = true; });
-  for (const type of ['pointerup', 'pointercancel']) {
-    window.addEventListener(type, () => {
-      if (!sliderPointer) return;
-      sliderPointer = holdSliderActive = false;
-      stopHold();
-    });
-  }
+  holdSlider.addEventListener('pointerdown', () => { holdSliderActive = true; });
   $('electronResetBtn').addEventListener('click', resetElectron);
   $('angleSlider').addEventListener('input', e => { state.angle = Number(e.target.value); updateUi(); });
   $('modeUBtn').addEventListener('click', () => { state.meterMode = 'U'; updateUi(); });

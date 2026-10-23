@@ -209,43 +209,33 @@ test('Erklärmodus: Elektron wandert entgegen der Kraft auf positive Ladungen un
   assert.equal(electron.x, 0);
 });
 
-test('Festhalten: Leiter pendelt nicht und fährt mit der vorgegebenen Geschwindigkeit zum Ziel', async () => {
+test('Festhalten: Leiter pendelt nicht, folgt Regler bzw. Finger und bleibt beim Loslassen stehen', async () => {
   const { setHold, holdTo } = await import('../js/physik.js');
-  Object.assign(state, { setup: 'drehbar', longMagnet: false, northUp: true, angle: 0, magnetAngle: 0, explain: true, holdSpeed: 20 });
+  Object.assign(state, { setup: 'drehbar', longMagnet: false, northUp: true, angle: 0, magnetAngle: 0, explain: true });
   resetPhysics();
   swing.theta = rad(10);
   setHold(true);
   for (let i = 0; i < 120; i++) stepPhysics(1 / 60);
   assert.equal(swing.theta, rad(10), 'pendelt nicht zurück');
   assert.equal(emf(), 0);
-  // Regler auf −10°: gleichmäßig mit 20 °/s nach hinten, dabei Spannung und wanderndes Elektron
+  // Regler langsam nach hinten schieben: Leiter folgt, Spannung und wanderndes Elektron
   resetElectron();
-  holdTo(rad(-10));
-  for (let i = 0; i < 30; i++) {
-    stepPhysics(1 / 60);
-    assert.ok(Math.abs(swing.omega + rad(20)) < 1e-9, 'konstante Geschwindigkeit');
-  }
+  for (let i = 1; i <= 60; i++) { holdTo(rad(10 - i / 3)); stepPhysics(1 / 60); }
+  assert.ok(Math.abs(swing.theta - rad(-10)) < rad(1.5), 'folgt dem Regler');
   assert.ok(emf() < 0 && electron.x > 0, 'nach hinten: Elektron wandert nach rechts');
-  for (let i = 0; i < 60; i++) stepPhysics(1 / 60);
-  assert.ok(Math.abs(swing.theta - rad(-10)) < 1e-9, 'nach 1 s am Ziel angekommen');
-  assert.equal(swing.omega, 0);
-  // Ziehen: der Finger gibt nur das Ziel vor; der Leiter folgt mit 20 °/s und bleibt beim Loslassen sofort stehen
-  startDrag(swing.theta);
-  dragTo(rad(10));
-  stepPhysics(1 / 60);
-  assert.ok(Math.abs(swing.omega - rad(20)) < 1e-9, 'nicht so schnell wie der Finger');
-  endDrag();
-  const released = swing.theta;
-  for (let i = 0; i < 120; i++) stepPhysics(1 / 60);
-  assert.equal(swing.theta, released, 'bleibt beim Loslassen stehen');
-  // Regler: Ziel weit weg, nach dem Loslassen des Reglers sofort Stillstand
-  const { stopHold } = await import('../js/physik.js');
-  holdTo(rad(-20));
-  for (let i = 0; i < 10; i++) stepPhysics(1 / 60);
-  stopHold();
+  // Regler losgelassen: Leiter kommt binnen 0,2 s an der Reglerposition zur Ruhe und bleibt dort
+  for (let i = 0; i < 12; i++) stepPhysics(1 / 60);
+  assert.ok(Math.abs(swing.theta - rad(-10)) < rad(0.05));
   const stopped = swing.theta;
   for (let i = 0; i < 60; i++) stepPhysics(1 / 60);
-  assert.equal(swing.theta, stopped, 'Regler losgelassen: Leiter steht');
+  assert.ok(Math.abs(swing.theta - stopped) < rad(0.05), 'Leiter steht');
+  // Ziehen: folgt dem Finger, bleibt beim Loslassen stehen
+  startDrag(swing.theta);
+  for (let i = 0; i < 30; i++) { dragTo(rad(-10 + i * 0.5)); stepPhysics(1 / 60); }
+  endDrag();
+  const released = swing.theta;
+  for (let i = 0; i < 60; i++) stepPhysics(1 / 60);
+  assert.equal(swing.theta, released);
   setHold(false);
   state.explain = false;
 });

@@ -15,7 +15,7 @@ const degToRad = deg => deg * Math.PI / 180;
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 // Schaukel: Auslenkwinkel θ gegen die Senkrechte (positiv = Stab nach vorne), Winkelgeschwindigkeit ω
-// Festhalten: holdTarget ist die Lage, zu der der Leiter mit vorgegebener Geschwindigkeit fährt
+// Festhalten: holdTarget ist die Lage, der der Leiter folgt (Regler bzw. Finger)
 export const swing = { theta: 0, omega: 0, dragging: false, target: 0, holdTarget: 0 };
 // Magnet auf dem Tisch: Verschiebung z entlang der Schwingrichtung in cm (0 = Stab mitten im Polbereich),
 // Geschwindigkeit v in m/s. Beim drehbaren Magneten bleibt beides 0.
@@ -139,10 +139,9 @@ export function brakeForce() {
 
 function stepSwing(dt) {
   if (state.hold) {
-    // Festgehalten: mit der vorgegebenen Geschwindigkeit zum Ziel (Finger bzw. Regler), dort stehen bleiben
+    // Festgehalten: folgt dem Finger bzw. Regler direkt (wie beim Ziehen) und bleibt am Ziel stehen
     if (swing.dragging) swing.holdTarget = swing.target;
-    const diff = swing.holdTarget - swing.theta;
-    swing.omega = Math.sign(diff) * Math.min(degToRad(state.holdSpeed), Math.abs(diff) / dt);
+    swing.omega = clamp((swing.holdTarget - swing.theta) / DRAG_TIME, -DRAG_MAX_OMEGA, DRAG_MAX_OMEGA);
   } else if (swing.dragging) {
     swing.omega = clamp((swing.target - swing.theta) / DRAG_TIME, -DRAG_MAX_OMEGA, DRAG_MAX_OMEGA);
   } else {
@@ -270,11 +269,6 @@ export function endDrag() {
   if (state.hold) swing.omega = 0;
 }
 
-// Festgehaltenen Leiter sofort anhalten (Regler losgelassen)
-export function stopHold() {
-  swing.holdTarget = swing.theta;
-  swing.omega = 0;
-}
 
 // Festhalten ein/aus: der Leiter bleibt, wo er gerade ist
 export function setHold(on) {
@@ -283,7 +277,7 @@ export function setHold(on) {
   if (on) swing.omega = 0;
 }
 
-// Festgehaltenen Leiter (Schieberegler) langsam zur Lage theta fahren lassen
+// Festgehaltenen Leiter (Schieberegler) zur Lage theta bewegen
 export function holdTo(theta) {
   const max = degToRad(SWING.MAX_ANGLE);
   swing.holdTarget = clamp(theta, -max, max);
