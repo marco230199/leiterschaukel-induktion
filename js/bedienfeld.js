@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------
 // Bedienfeld: Knöpfe, Regler und Anzeigen
 // ------------------------------------------------------------------
-import { METER, SWING } from './config.js';
+import { METER, SWING, EXPLAIN, PENDULUM_L } from './config.js';
 import { state } from './state.js';
 import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron, setHold, holdTo, swing } from './physik.js';
 import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus } from './aufbau.js';
@@ -68,14 +68,20 @@ function updateUi() {
   updateMeterFace();
 }
 
-// Regler „Lage des Leiters“ folgt dem Leiter (z. B. beim Ziehen), solange man ihn nicht selbst bedient;
-// angezeigt wird, wie weit der Stab vor (+) bzw. hinter (−) der Ruhelage ist
+// Regler „Lage des Leiters“: zeigt das Ziel; die Anzeige daneben den aktuellen Winkel (vorne +, hinten −).
+// Beim Ziehen des Leiters folgt der Regler dem Finger, solange man ihn nicht selbst bedient.
 let holdSliderActive = false;
 export function updateHoldSlider() {
   if (!state.hold) return;
-  if (!holdSliderActive) $('holdSlider').value = (swing.theta * 180 / Math.PI).toFixed(1);
-  const z = SWING.LENGTH * Math.sin(swing.theta);
-  $('holdOut').textContent = (z < -0.05 ? '−' : '') + formatNumber(Math.abs(z), 1) + ' cm';
+  if (!holdSliderActive) $('holdSlider').value = (swing.holdTarget * 180 / Math.PI).toFixed(1);
+  const deg = swing.theta * 180 / Math.PI;
+  $('holdOut').textContent = (deg < -0.05 ? '−' : '') + formatNumber(Math.abs(deg), 1) + '°';
+}
+
+// Vorgegebene Geschwindigkeit in °/s und als Bahngeschwindigkeit des Stabs in m/s
+function updateHoldSpeed() {
+  const v = PENDULUM_L * state.holdSpeed * Math.PI / 180;
+  $('holdSpeedOut').textContent = `${state.holdSpeed} °/s (${formatNumber(v, 2)} m/s)`;
 }
 
 // Messwert als Zahl (nur sichtbar, wenn eingeschaltet)
@@ -206,6 +212,10 @@ export function initUi() {
   holdSlider.min = -SWING.MAX_ANGLE;
   holdSlider.max = SWING.MAX_ANGLE;
   holdSlider.addEventListener('input', () => holdTo(Number(holdSlider.value) * Math.PI / 180));
+  const speedSlider = $('holdSpeedSlider');
+  Object.assign(speedSlider, EXPLAIN.HOLD_SPEED, { value: state.holdSpeed });
+  speedSlider.addEventListener('input', () => { state.holdSpeed = Number(speedSlider.value); updateHoldSpeed(); });
+  updateHoldSpeed();
   for (const type of ['pointerdown', 'focus']) holdSlider.addEventListener(type, () => { holdSliderActive = true; });
   for (const type of ['pointerup', 'pointercancel', 'blur']) holdSlider.addEventListener(type, () => { holdSliderActive = false; });
   $('electronResetBtn').addEventListener('click', resetElectron);

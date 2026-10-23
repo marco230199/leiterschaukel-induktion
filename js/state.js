@@ -18,5 +18,6 @@ export const state = {
   showB: true,
   showF: true,
   hold: false,        // Erklärmodus: Leiter festgehalten (pendelt nicht), Lage per Schieberegler oder Ziehen
+  holdSpeed: 30,      // ... dabei fährt er mit dieser vorgegebenen Winkelgeschwindigkeit in °/s
   paused: false,      // Erklärmodus: Bewegung angehalten (Pfeile zeigen den Augenblick)
 };

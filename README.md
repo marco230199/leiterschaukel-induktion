@@ -48,10 +48,11 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
 - **Pause / Weiter:** friert die Bewegung ein (Schaukel, Magnet, Elektron). Die Pfeile zeigen den Augenblick,
   so bleibt z. B. der Geschwindigkeitspfeil v sichtbar, obwohl nichts mehr läuft.
 - **Zeitlupe:** wie im Bedienfeld rechts (beide Schalter sind gekoppelt).
-- **Leiter festhalten:** Der Leiter pendelt nicht mehr, er bleibt, wo er ist. Ziehen geht weiter, nach dem
-  Loslassen bleibt er stehen. Mit dem Regler „Lage des Leiters“ fährt er langsam (höchstens 1 rad/s,
-  also v ≤ 0,22 m/s) zur eingestellten Lage; der Regler folgt auch dem Ziehen. „Auslenken und loslassen“
-  beendet das Festhalten.
+- **Leiter festhalten:** Der Leiter pendelt nicht mehr, er bleibt, wo er ist. Mit dem Regler „Lage des
+  Leiters“ (Winkel in Grad, vorne +, hinten −) oder durch Ziehen gibt man das Ziel vor; der Leiter fährt
+  immer gleichmäßig mit der am Regler „Geschwindigkeit“ eingestellten Winkelgeschwindigkeit dorthin
+  (5–60 °/s, Anzeige auch in m/s) – unabhängig davon, wie schnell man schiebt oder zieht – und bleibt dort
+  stehen. „Auslenken und loslassen“ beendet das Festhalten.
 - **v, B, F_L, Hand:** Pfeile und Hand einzeln ein- und ausblenden.
 - **Elektron in die Mitte**
 

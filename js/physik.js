@@ -15,7 +15,7 @@ const degToRad = deg => deg * Math.PI / 180;
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 // Schaukel: Auslenkwinkel θ gegen die Senkrechte (positiv = Stab nach vorne), Winkelgeschwindigkeit ω
-// Festhalten: holdTarget ist die Lage, zu der der Leiter langsam fährt (Schieberegler)
+// Festhalten: holdTarget ist die Lage, zu der der Leiter mit vorgegebener Geschwindigkeit fährt
 export const swing = { theta: 0, omega: 0, dragging: false, target: 0, holdTarget: 0 };
 // Magnet auf dem Tisch: Verschiebung z entlang der Schwingrichtung in cm (0 = Stab mitten im Polbereich),
 // Geschwindigkeit v in m/s. Beim drehbaren Magneten bleibt beides 0.
@@ -138,11 +138,13 @@ export function brakeForce() {
 // ---------------- Zeitschritt
 
 function stepSwing(dt) {
-  if (swing.dragging) {
+  if (state.hold) {
+    // Festgehalten: mit der vorgegebenen Geschwindigkeit zum Ziel (Finger bzw. Regler), dort stehen bleiben
+    if (swing.dragging) swing.holdTarget = swing.target;
+    const diff = swing.holdTarget - swing.theta;
+    swing.omega = Math.sign(diff) * Math.min(degToRad(state.holdSpeed), Math.abs(diff) / dt);
+  } else if (swing.dragging) {
     swing.omega = clamp((swing.target - swing.theta) / DRAG_TIME, -DRAG_MAX_OMEGA, DRAG_MAX_OMEGA);
-    swing.holdTarget = swing.theta;   // beim Festhalten bleibt der Leiter nach dem Loslassen hier
-  } else if (state.hold) {
-    swing.omega = clamp((swing.holdTarget - swing.theta) / EXPLAIN.HOLD_TIME, -EXPLAIN.HOLD_MAX_OMEGA, EXPLAIN.HOLD_MAX_OMEGA);
   } else {
     const acc = -G / PENDULUM_L * Math.sin(swing.theta) - AIR_DAMPING * swing.omega
       + brakeForce() / (SWING_MASS * PENDULUM_L);
@@ -261,10 +263,10 @@ export function dragTo(theta) {
   const max = degToRad(SWING.MAX_ANGLE);
   swing.target = clamp(theta, -max, max);
 }
+// Loslassen; beim Festhalten fährt der Leiter noch bis zur Stelle, an der losgelassen wurde
 export function endDrag() {
   swing.dragging = false;
-  swing.holdTarget = swing.theta;
-  if (state.hold) swing.omega = 0;
+  if (!state.hold) swing.holdTarget = swing.theta;
 }
 
 // Festhalten ein/aus: der Leiter bleibt, wo er gerade ist
