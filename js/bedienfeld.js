@@ -3,7 +3,7 @@
 // ------------------------------------------------------------------
 import { METER, SWING, EXPLAIN, PENDULUM_L } from './config.js';
 import { state } from './state.js';
-import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron, setHold, holdTo, swing } from './physik.js';
+import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron, setHold, holdTo, stopHold, swing } from './physik.js';
 import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus } from './aufbau.js';
 import { updateMeterFace, buildCables, turnMeterTowards, setMeterVisible } from './messgeraet.js';
 import { explainView } from './erklaerung.js';
@@ -216,8 +216,20 @@ export function initUi() {
   Object.assign(speedSlider, EXPLAIN.HOLD_SPEED, { value: state.holdSpeed });
   speedSlider.addEventListener('input', () => { state.holdSpeed = Number(speedSlider.value); updateHoldSpeed(); });
   updateHoldSpeed();
-  for (const type of ['pointerdown', 'focus']) holdSlider.addEventListener(type, () => { holdSliderActive = true; });
-  for (const type of ['pointerup', 'pointercancel', 'blur']) holdSlider.addEventListener(type, () => { holdSliderActive = false; });
+  // Der Leiter fährt nur, solange man den Regler festhält; beim Loslassen bleibt er sofort stehen
+  // (mit den Pfeiltasten fährt er Schritt für Schritt bis zum jeweiligen Ziel)
+  // (Loslassen wird auf der ganzen Seite abgehört, falls man außerhalb des Reglers loslässt)
+  let sliderPointer = false;
+  holdSlider.addEventListener('focus', () => { holdSliderActive = true; });
+  holdSlider.addEventListener('blur', () => { holdSliderActive = false; });
+  holdSlider.addEventListener('pointerdown', () => { sliderPointer = holdSliderActive = true; });
+  for (const type of ['pointerup', 'pointercancel']) {
+    window.addEventListener(type, () => {
+      if (!sliderPointer) return;
+      sliderPointer = holdSliderActive = false;
+      stopHold();
+    });
+  }
   $('electronResetBtn').addEventListener('click', resetElectron);
   $('angleSlider').addEventListener('input', e => { state.angle = Number(e.target.value); updateUi(); });
   $('modeUBtn').addEventListener('click', () => { state.meterMode = 'U'; updateUi(); });

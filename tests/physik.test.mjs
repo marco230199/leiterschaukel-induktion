@@ -229,14 +229,23 @@ test('Festhalten: Leiter pendelt nicht und fährt mit der vorgegebenen Geschwind
   for (let i = 0; i < 60; i++) stepPhysics(1 / 60);
   assert.ok(Math.abs(swing.theta - rad(-10)) < 1e-9, 'nach 1 s am Ziel angekommen');
   assert.equal(swing.omega, 0);
-  // Ziehen: der Finger gibt nur das Ziel vor; der Leiter folgt mit 20 °/s und hält am Loslasspunkt
+  // Ziehen: der Finger gibt nur das Ziel vor; der Leiter folgt mit 20 °/s und bleibt beim Loslassen sofort stehen
   startDrag(swing.theta);
   dragTo(rad(10));
   stepPhysics(1 / 60);
   assert.ok(Math.abs(swing.omega - rad(20)) < 1e-9, 'nicht so schnell wie der Finger');
   endDrag();
+  const released = swing.theta;
   for (let i = 0; i < 120; i++) stepPhysics(1 / 60);
-  assert.ok(Math.abs(swing.theta - rad(10)) < 1e-9, 'fährt bis zum Loslasspunkt');
+  assert.equal(swing.theta, released, 'bleibt beim Loslassen stehen');
+  // Regler: Ziel weit weg, nach dem Loslassen des Reglers sofort Stillstand
+  const { stopHold } = await import('../js/physik.js');
+  holdTo(rad(-20));
+  for (let i = 0; i < 10; i++) stepPhysics(1 / 60);
+  stopHold();
+  const stopped = swing.theta;
+  for (let i = 0; i < 60; i++) stepPhysics(1 / 60);
+  assert.equal(swing.theta, stopped, 'Regler losgelassen: Leiter steht');
   setHold(false);
   state.explain = false;
 });

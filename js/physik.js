@@ -263,10 +263,17 @@ export function dragTo(theta) {
   const max = degToRad(SWING.MAX_ANGLE);
   swing.target = clamp(theta, -max, max);
 }
-// Loslassen; beim Festhalten fährt der Leiter noch bis zur Stelle, an der losgelassen wurde
+// Loslassen; beim Festhalten bleibt der Leiter sofort stehen
 export function endDrag() {
   swing.dragging = false;
-  if (!state.hold) swing.holdTarget = swing.theta;
+  swing.holdTarget = swing.theta;
+  if (state.hold) swing.omega = 0;
+}
+
+// Festgehaltenen Leiter sofort anhalten (Regler losgelassen)
+export function stopHold() {
+  swing.holdTarget = swing.theta;
+  swing.omega = 0;
 }
 
 // Festhalten ein/aus: der Leiter bleibt, wo er gerade ist
