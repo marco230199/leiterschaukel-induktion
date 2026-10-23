@@ -1,9 +1,9 @@
 // ------------------------------------------------------------------
 // Bedienfeld: Knöpfe, Regler und Anzeigen
 // ------------------------------------------------------------------
-import { METER } from './config.js';
+import { METER, SWING } from './config.js';
 import { state } from './state.js';
-import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron } from './physik.js';
+import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron, setHold, holdTo, swing } from './physik.js';
 import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus } from './aufbau.js';
 import { updateMeterFace, buildCables, turnMeterTowards, setMeterVisible } from './messgeraet.js';
 import { explainView } from './erklaerung.js';
@@ -12,7 +12,8 @@ import { resetView as resetSetupView, camera, controls, table } from './szene.js
 import { formatNumber } from './hilfen.js';
 
 const $ = id => document.getElementById(id);
-const EXPLAIN_TOGGLES = [['showVBtn', 'showV'], ['showBBtn', 'showB'], ['showFBtn', 'showF'], ['showHandBtn', 'showExplainHand']];
+const EXPLAIN_TOGGLES = [['explainSlowBtn', 'slowMotion'], ['pauseBtn', 'paused'], ['holdBtn', 'hold'],
+  ['showVBtn', 'showV'], ['showBBtn', 'showB'], ['showFBtn', 'showF'], ['showHandBtn', 'showExplainHand']];
 
 // Startansicht: im Erklärmodus nah am Stab, sonst die Ansicht des Versuchs
 const resetView = () => (state.explain ? explainView(controls) : resetSetupView());
@@ -29,10 +30,10 @@ function updateUi() {
   $('explainBtn').setAttribute('aria-pressed', String(state.explain));
   $('explainPanel').hidden = !state.explain;
   $('explainHandInfo').hidden = !state.showExplainHand;
-  $('pauseBtn').textContent = state.paused ? 'Weiter' : 'Pause';
-  $('pauseBtn').classList.toggle('on', state.paused);
-  $('pauseBtn').setAttribute('aria-pressed', String(state.paused));
   $('pauseInfo').hidden = !state.paused;
+  $('pauseBtn').textContent = state.paused ? 'Weiter' : 'Pause';
+  $('holdBtn').textContent = state.hold ? 'Leiter loslassen' : 'Leiter festhalten';
+  $('holdBox').hidden = !state.hold;
   for (const [id, key] of EXPLAIN_TOGGLES) $(id).setAttribute('aria-pressed', String(state[key]));
   $('meterSection').hidden = state.explain;
   $('slowCheck').checked = state.slowMotion;
@@ -65,6 +66,16 @@ function updateUi() {
   $('valueOut').hidden = !state.showValue;
   $('longStatus').hidden = !state.longMagnet;
   updateMeterFace();
+}
+
+// Regler „Lage des Leiters“ folgt dem Leiter (z. B. beim Ziehen), solange man ihn nicht selbst bedient;
+// angezeigt wird, wie weit der Stab vor (+) bzw. hinter (−) der Ruhelage ist
+let holdSliderActive = false;
+export function updateHoldSlider() {
+  if (!state.hold) return;
+  if (!holdSliderActive) $('holdSlider').value = (swing.theta * 180 / Math.PI).toFixed(1);
+  const z = SWING.LENGTH * Math.sin(swing.theta);
+  $('holdOut').textContent = (z < -0.05 ? '−' : '') + formatNumber(Math.abs(z), 1) + ' cm';
 }
 
 // Messwert als Zahl (nur sichtbar, wenn eingeschaltet)
@@ -106,6 +117,7 @@ function setExplain(on) {
   cancelDrag();
   state.explain = on;
   state.paused = false;
+  setHold(false);
   if (on) state.slowMotion = true;
   stopSwing();
   resetElectron();
@@ -168,10 +180,14 @@ export function initUi() {
     stopSwing();
     syncApparatus();
   });
-  $('pushBtn').addEventListener('click', pushSwing);
+  $('pushBtn').addEventListener('click', () => {   // „loslassen“: Festhalten endet
+    if (state.hold) setHold(false);
+    pushSwing();
+    updateUi();
+  });
   $('stopBtn').addEventListener('click', stopSwing);
   $('meterTurnBtn').addEventListener('click', () => turnMeterTowards(camera.position));
-  $('slowCheck').addEventListener('change', e => { state.slowMotion = e.target.checked; });
+  $('slowCheck').addEventListener('change', e => { state.slowMotion = e.target.checked; updateUi(); });
   $('flipBtn').addEventListener('click', () => {
     if (flip.active) return;
     Object.assign(flip, { active: true, t: 0, swapped: false });
@@ -179,12 +195,19 @@ export function initUi() {
   });
   $('longCheck').addEventListener('change', e => setLongMagnet(e.target.checked));
   $('explainBtn').addEventListener('click', () => setExplain(!state.explain));
-  for (const [id, key] of EXPLAIN_TOGGLES) $(id).addEventListener('click', () => { state[key] = !state[key]; updateUi(); });
-  $('pauseBtn').addEventListener('click', () => {
-    cancelDrag();
-    state.paused = !state.paused;
-    updateUi();
-  });
+  for (const [id, key] of EXPLAIN_TOGGLES) {
+    $(id).addEventListener('click', () => {
+      if (key === 'paused') cancelDrag();
+      if (key === 'hold') setHold(!state.hold); else state[key] = !state[key];
+      updateUi();
+    });
+  }
+  const holdSlider = $('holdSlider');
+  holdSlider.min = -SWING.MAX_ANGLE;
+  holdSlider.max = SWING.MAX_ANGLE;
+  holdSlider.addEventListener('input', () => holdTo(Number(holdSlider.value) * Math.PI / 180));
+  for (const type of ['pointerdown', 'focus']) holdSlider.addEventListener(type, () => { holdSliderActive = true; });
+  for (const type of ['pointerup', 'pointercancel', 'blur']) holdSlider.addEventListener(type, () => { holdSliderActive = false; });
   $('electronResetBtn').addEventListener('click', resetElectron);
   $('angleSlider').addEventListener('input', e => { state.angle = Number(e.target.value); updateUi(); });
   $('modeUBtn').addEventListener('click', () => { state.meterMode = 'U'; updateUi(); });

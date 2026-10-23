@@ -7,7 +7,7 @@ import { state } from './state.js';
 import { stepPhysics } from './physik.js';
 import { syncApparatus } from './aufbau.js';
 import { syncMeter } from './messgeraet.js';
-import { initUi, animateFlip, updateValue } from './bedienfeld.js';
+import { initUi, animateFlip, updateValue, updateHoldSlider } from './bedienfeld.js';
 import { syncExplain } from './erklaerung.js';
 import './ziehen.js';
 
@@ -24,6 +24,7 @@ renderer.setAnimationLoop(() => {
   syncMeter();
   syncExplain(dt);
   updateValue();
+  updateHoldSlider();
   controls.update();
   renderer.render(scene, camera);
 });

@@ -208,3 +208,33 @@ test('Erklärmodus: Elektron wandert entgegen der Kraft auf positive Ladungen un
   for (let i = 0; i < 60; i++) stepPhysics(1 / 60);
   assert.equal(electron.x, 0);
 });
+
+test('Festhalten: Leiter pendelt nicht, fährt langsam zur Lage am Regler, bleibt nach dem Ziehen stehen', async () => {
+  const { setHold, holdTo } = await import('../js/physik.js');
+  Object.assign(state, { setup: 'drehbar', longMagnet: false, northUp: true, angle: 0, magnetAngle: 0, explain: true });
+  resetPhysics();
+  swing.theta = rad(10);
+  setHold(true);
+  for (let i = 0; i < 120; i++) stepPhysics(1 / 60);
+  assert.equal(swing.theta, rad(10), 'pendelt nicht zurück');
+  assert.equal(emf(), 0);
+  // Regler: langsam nach hinten fahren, dabei Spannung und wanderndes Elektron
+  resetElectron();
+  holdTo(rad(-10));
+  let maxOmega = 0;
+  for (let i = 0; i < 30; i++) { stepPhysics(1 / 60); maxOmega = Math.max(maxOmega, Math.abs(swing.omega)); }
+  assert.ok(maxOmega <= 1 + 1e-9, 'langsam');
+  assert.ok(emf() < 0 && electron.x > 0, 'nach hinten: Elektron wandert nach rechts');
+  for (let i = 0; i < 120; i++) stepPhysics(1 / 60);
+  assert.ok(Math.abs(swing.theta - rad(-10)) < 1e-3, 'am Ziel angekommen');
+  assert.ok(Math.abs(swing.omega) < 1e-3);
+  // Ziehen: Leiter folgt, bleibt nach dem Loslassen stehen
+  startDrag(swing.theta);
+  for (let i = 0; i < 30; i++) { dragTo(rad(-10 + i * 0.5)); stepPhysics(1 / 60); }
+  endDrag();
+  const released = swing.theta;
+  for (let i = 0; i < 60; i++) stepPhysics(1 / 60);
+  assert.equal(swing.theta, released);
+  setHold(false);
+  state.explain = false;
+});

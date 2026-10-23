@@ -24,8 +24,20 @@
     <h2>Elektron im Leiter</h2>
     <p class="status">Das Elektron bewegt sich mit dem Leiter durch das Magnetfeld. Auf die bewegte Ladung
       wirkt die Lorentzkraft und verschiebt das Elektron entlang des Leiters.</p>
-    <button id="pauseBtn" class="power" type="button" aria-pressed="false">Pause</button>
+    <div class="toggles two" role="group" aria-label="Ablauf">
+      <button id="pauseBtn" class="state" type="button" aria-pressed="false">Pause</button>
+      <button id="explainSlowBtn" class="state" type="button" aria-pressed="false">Zeitlupe</button>
+    </div>
     <p class="status" id="pauseInfo" hidden>Pause: Die Bewegung ist angehalten, die Pfeile zeigen den Augenblick.</p>
+    <button id="holdBtn" class="state" type="button" aria-pressed="false">Leiter festhalten</button>
+    <div id="holdBox" hidden>
+      <p class="status">Der Leiter pendelt nicht. Ziehe ihn oder bewege ihn mit dem Regler langsam.</p>
+      <label class="slider">
+        <span class="row">Lage des Leiters <output id="holdOut">0 cm</output></span>
+        <input id="holdSlider" type="range" step="0.2" value="0" />
+      </label>
+      <p class="status">links: hinten (zum Bogen) · rechts: vorne (aus dem Magneten)</p>
+    </div>
     <div class="toggles" role="group" aria-label="Anzeigen">
       <button id="showVBtn" type="button"><span class="dot" style="background:#2e7d32"></span>v</button>
       <button id="showBBtn" type="button"><span class="dot" style="background:#1565c0"></span>B</button>

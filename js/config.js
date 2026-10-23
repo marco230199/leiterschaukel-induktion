@@ -92,6 +92,8 @@ export const EXPLAIN = {
   ARROW_F: 200,               // Pfeillänge in cm pro V/m
   ARROW_B: 6,                 // Pfeillänge für das volle Feld
   ARROW_MAX: 12,
+  HOLD_TIME: 0.25,            // Festhalten: Leiter fährt mit dieser Zeitkonstante (s) zur Lage am Schieberegler ...
+  HOLD_MAX_OMEGA: 1,          // ... höchstens mit dieser Winkelgeschwindigkeit (rad/s), also langsam (v ≤ 0,22 m/s)
 };
 
 // Zeigermessgerät: Zeiger als gedämpfter Schwinger (Eigenfrequenz, Dämpfungsgrad)

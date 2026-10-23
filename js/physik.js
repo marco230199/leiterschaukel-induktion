@@ -15,7 +15,8 @@ const degToRad = deg => deg * Math.PI / 180;
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 // Schaukel: Auslenkwinkel θ gegen die Senkrechte (positiv = Stab nach vorne), Winkelgeschwindigkeit ω
-export const swing = { theta: 0, omega: 0, dragging: false, target: 0 };
+// Festhalten: holdTarget ist die Lage, zu der der Leiter langsam fährt (Schieberegler)
+export const swing = { theta: 0, omega: 0, dragging: false, target: 0, holdTarget: 0 };
 // Magnet auf dem Tisch: Verschiebung z entlang der Schwingrichtung in cm (0 = Stab mitten im Polbereich),
 // Geschwindigkeit v in m/s. Beim drehbaren Magneten bleibt beides 0.
 export const magnetMotion = { z: 0, v: 0, dragging: false, target: 0 };
@@ -139,6 +140,9 @@ export function brakeForce() {
 function stepSwing(dt) {
   if (swing.dragging) {
     swing.omega = clamp((swing.target - swing.theta) / DRAG_TIME, -DRAG_MAX_OMEGA, DRAG_MAX_OMEGA);
+    swing.holdTarget = swing.theta;   // beim Festhalten bleibt der Leiter nach dem Loslassen hier
+  } else if (state.hold) {
+    swing.omega = clamp((swing.holdTarget - swing.theta) / EXPLAIN.HOLD_TIME, -EXPLAIN.HOLD_MAX_OMEGA, EXPLAIN.HOLD_MAX_OMEGA);
   } else {
     const acc = -G / PENDULUM_L * Math.sin(swing.theta) - AIR_DAMPING * swing.omega
       + brakeForce() / (SWING_MASS * PENDULUM_L);
@@ -153,7 +157,8 @@ function stepSwing(dt) {
   const [lo, hi] = swingLimits();
   if (swing.theta < lo || swing.theta > hi) {
     swing.theta = clamp(swing.theta, lo, hi);
-    swing.omega = swing.dragging ? 0 : -0.2 * swing.omega;
+    swing.omega = swing.dragging || state.hold ? 0 : -0.2 * swing.omega;
+    if (state.hold) swing.holdTarget = swing.theta;
   }
 }
 
@@ -172,7 +177,8 @@ function moveSwingTo(theta) {
     if (blocked(mid)) hit = mid; else free = mid;
   }
   swing.theta = free;
-  swing.omega = swing.dragging ? 0 : -0.2 * swing.omega;
+  swing.omega = swing.dragging || state.hold ? 0 : -0.2 * swing.omega;
+  if (state.hold) swing.holdTarget = swing.theta;
 }
 
 // Magnet auf dem Tisch ziehen. Stößt er an den Stab, schiebt er die Schaukel vor sich her;
@@ -194,7 +200,7 @@ function stepMagnet(dt) {
       return;
     }
     // Die Schaukel bewegt sich mit dem Magneten mit
-    swing.theta = theta;
+    swing.theta = swing.holdTarget = theta;
     swing.omega = (z - magnetMotion.z) / 100 / dt / (PENDULUM_L * Math.cos(theta));
   }
   magnetMotion.v = (z - magnetMotion.z) / 100 / dt;
@@ -257,6 +263,21 @@ export function dragTo(theta) {
 }
 export function endDrag() {
   swing.dragging = false;
+  swing.holdTarget = swing.theta;
+  if (state.hold) swing.omega = 0;
+}
+
+// Festhalten ein/aus: der Leiter bleibt, wo er gerade ist
+export function setHold(on) {
+  state.hold = on;
+  swing.holdTarget = swing.theta;
+  if (on) swing.omega = 0;
+}
+
+// Festgehaltenen Leiter (Schieberegler) langsam zur Lage theta fahren lassen
+export function holdTo(theta) {
+  const max = degToRad(SWING.MAX_ANGLE);
+  swing.holdTarget = clamp(theta, -max, max);
 }
 
 export function startMagnetDrag(z) {
@@ -283,13 +304,13 @@ export function pushSwing() {
   swing.dragging = false;
   swing.omega = 0;
   if (state.setup === 'drehbar') {
-    swing.theta = Math.min(degToRad(pushAngle()), swingLimits()[1]);
+    swing.theta = swing.holdTarget = Math.min(degToRad(pushAngle()), swingLimits()[1]);
     return;
   }
   let theta = restingTheta();
   const step = degToRad(0.1);
   while (theta + step <= degToRad(pushAngle()) && !collides(theta + step, 0, magnetMotion.z)) theta += step;
-  swing.theta = theta;
+  swing.theta = swing.holdTarget = theta;
 }
 
 // Ruhelage der Schaukel: senkrecht, oder – wenn dort der Magnet im Weg ist – an ihn angelehnt
@@ -306,6 +327,7 @@ function restingTheta() {
 export function stopSwing() {
   Object.assign(swing, { theta: 0, omega: 0, dragging: false, target: 0 });
   if (state.setup === 'tisch') swing.theta = restingTheta();
+  swing.holdTarget = swing.theta;
   Object.assign(needle, { pos: 0, vel: 0 });
 }
 

@@ -17,5 +17,6 @@ export const state = {
   showV: true,        // Erklärmodus: Pfeile v, B, F_L ein-/ausblenden
   showB: true,
   showF: true,
+  hold: false,        // Erklärmodus: Leiter festgehalten (pendelt nicht), Lage per Schieberegler oder Ziehen
   paused: false,      // Erklärmodus: Bewegung angehalten (Pfeile zeigen den Augenblick)
 };

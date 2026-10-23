@@ -151,3 +151,8 @@ html, body {
 @media (max-width: 700px) {
   .popup { top: 16px; width: auto; right: 16px; max-height: 30%; }
 }
+.popup .toggles.two { grid-template-columns: 1fr 1fr; }
+.popup .slider { margin-top: 8px; }
+/* Schalter für Pause, Zeitlupe, Festhalten: eingeschaltet blau gefüllt */
+.popup .toggles button.state[aria-pressed="false"] { opacity: 1; box-shadow: none; }
+.popup button.state[aria-pressed="true"] { background: #1d4f91; border-color: #1d4f91; color: #fff; }
