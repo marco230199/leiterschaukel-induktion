@@ -15,11 +15,18 @@
   </div>
 
   <div class="hint">
-    <span>Schaukel ziehen: bewegen · daneben ziehen: Ansicht drehen · Mausrad/zwei Finger: zoomen</span>
+    <span>Schaukel oder Magnet ziehen: bewegen · daneben ziehen: Ansicht drehen · Mausrad/zwei Finger: zoomen</span>
     <button id="resetView" type="button">Ansicht zurücksetzen</button>
   </div>
 
   <aside class="panel">
+    <section>
+      <h2>Versuch</h2>
+      <div class="segmented" role="group" aria-label="Versuch auswählen">
+        <button id="setupDrehbarBtn" type="button">Drehbarer Magnet</button>
+        <button id="setupTischBtn" type="button">Magnet auf dem Tisch</button>
+      </div>
+    </section>
     <section>
       <h2>Leiterschaukel</h2>
       <p class="status">Fasse den Kupferstab oder einen Bügel an und bewege die Schaukel. Lässt du los,
@@ -34,11 +41,17 @@
       <h2>Hufeisenmagnet</h2>
       <button id="flipBtn" type="button">Magnet umdrehen (N ↔ S)</button>
       <p class="status" id="magnetStatus"></p>
-      <label class="slider">
-        <span class="row">Drehwinkel des Magneten α <output id="angleOut">0°</output></span>
-        <input id="angleSlider" type="range" min="0" max="90" step="5" value="0" />
-      </label>
-      <p class="status">0°: Feld senkrecht zur Bewegung der Schaukel · 90°: Feld parallel zur Bewegung</p>
+      <div id="tableControls">
+        <p class="status">Fasse den Magneten an und schiebe ihn auf dem Tisch nach vorne oder hinten.</p>
+        <button id="resetMagnetBtn" type="button">Magnet zurücksetzen</button>
+      </div>
+      <div id="angleControls">
+        <label class="slider">
+          <span class="row">Drehwinkel des Magneten α <output id="angleOut">0°</output></span>
+          <input id="angleSlider" type="range" min="0" max="90" step="5" value="0" />
+        </label>
+        <p class="status">0°: Feld senkrecht zur Bewegung der Schaukel · 90°: Feld parallel zur Bewegung</p>
+      </div>
     </section>
     <section>
       <h2>Messgerät</h2>

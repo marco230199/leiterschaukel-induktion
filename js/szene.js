@@ -6,6 +6,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { addMesh } from './hilfen.js';
 import { mat } from './materialien.js';
+import { SETUPS } from './config.js';
+import { state } from './state.js';
 
 const container = document.getElementById('scene');
 export const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -28,10 +30,10 @@ controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 25;
 controls.maxDistance = 220;
 
-// Startansicht: schräg von vorne, Schaukel links, Messgerät rechts
+// Startansicht des jeweiligen Versuchs: schräg von vorne, Schaukel links, Messgerät rechts
 export function resetView() {
-  camera.position.set(22, 44, 112);
-  controls.target.set(28, 20, 0);
+  camera.position.set(...SETUPS[state.setup].camPos);
+  controls.target.set(...SETUPS[state.setup].camTarget);
 }
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7a66, 0.8));

@@ -5,7 +5,7 @@
 // Ursprung der Versuchsgeometrie: Lage der Stabmitte, wenn die Schaukel ruhig hängt (AXIS).
 // ------------------------------------------------------------------
 
-// Ruhelage der Stabmitte (zugleich Drehachse des Magneten)
+// Ruhelage der Stabmitte (beim drehbaren Magneten zugleich seine Drehachse)
 export const AXIS_Y = 18;
 
 // Leiterschaukel: Kupferstab an zwei starren Messingbügeln, die an einer Querstange hängen
@@ -17,7 +17,7 @@ export const SWING = {
   HANGER_R: 0.18,
   MAX_ANGLE: 50,              // größte Auslenkung beim Ziehen in Grad
 };
-export const PIVOT_Y = AXIS_Y + SWING.LENGTH;   // Höhe der Querstange
+export const PIVOT_Y = AXIS_Y + SWING.LENGTH;   // Höhe der Querstange (drehbarer Magnet)
 
 // Stativ: zwei Stangen links und rechts, verbunden durch die Querstange
 export const STAND = { X: 19, R: 0.6, TOP: PIVOT_Y + 5 };
@@ -35,6 +35,27 @@ export const MAGNET = {
   FRINGE: 2.5,                // Randfeld: Abfall auf 0 über 2,5 cm außerhalb des Polbereichs
   HOLDER_X: 11,               // Drehgelenk mit Winkelskala rechts neben dem Magneten
 };
+
+// Die beiden Versuchsaufbauten. Beim Magneten auf dem Tisch liegt der Polspalt tiefer,
+// deshalb ist die Querstange am Stativ entsprechend tiefer eingespannt.
+export const SETUPS = {
+  drehbar: {
+    title: 'Drehbarer Magnet',
+    axisY: AXIS_Y,
+    camPos: [22, 44, 112],
+    camTarget: [28, 20, 0],
+  },
+  tisch: {
+    title: 'Magnet auf dem Tisch',
+    axisY: MAGNET.THICK + MAGNET.GAP / 2,
+    camPos: [22, 38, 112],
+    camTarget: [28, 14, 0],
+  },
+};
+// Magnet auf dem Tisch: Verschiebebereich (Lage des Polbereichs relativ zum Stab in cm) und Ziehgeschwindigkeit
+export const MAGNET_Z_MIN = -24;
+export const MAGNET_Z_MAX = 30;
+export const MAGNET_DRAG_MAX_SPEED = 1.5;      // in m/s
 
 // Physikalische Modellgrößen (SI)
 export const B_FIELD = 0.1;                    // Flussdichte zwischen den Polen in T

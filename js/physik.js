@@ -2,12 +2,12 @@
 // Physik: Bewegung der Leiterschaukel, Induktionsspannung, Strom mit Bremskraft (Lenz) und Zeiger
 // Ohne Darstellung und ohne Browser – lässt sich mit Node testen (tests/physik.test.mjs).
 //
-// Die Funktionen barVelocity(), fieldAtBar() und emf() liefern alle Größen am Stab, die eine spätere
-// mikroskopische Ansicht (Elektronen im Stab, Lorentzkraft auf die Elektronen) braucht.
+// Die Funktionen barVelocity(), relativeVelocity(), fieldAtBar() und emf() liefern alle Größen am Stab,
+// die eine spätere mikroskopische Ansicht (Elektronen im Stab, Lorentzkraft auf die Elektronen) braucht.
 // ------------------------------------------------------------------
 import {
   SWING, MAGNET, B_FIELD, L_FIELD, G, PENDULUM_L, SWING_MASS, AIR_DAMPING, CIRCUIT_R, BRAKE_BOOST,
-  MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, METER,
+  MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, METER, MAGNET_Z_MIN, MAGNET_Z_MAX, MAGNET_DRAG_MAX_SPEED,
 } from './config.js';
 import { state } from './state.js';
 
@@ -16,6 +16,9 @@ const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 // Schaukel: Auslenkwinkel θ gegen die Senkrechte (positiv = Stab nach vorne), Winkelgeschwindigkeit ω
 export const swing = { theta: 0, omega: 0, dragging: false, target: 0 };
+// Magnet auf dem Tisch: Verschiebung z entlang der Schwingrichtung in cm (0 = Stab mitten im Polbereich),
+// Geschwindigkeit v in m/s. Beim drehbaren Magneten bleibt beides 0.
+export const magnetMotion = { z: 0, v: 0, dragging: false, target: 0 };
 // Zeiger des Messgeräts: Ausschlag als Anteil des Vollausschlags (−1 … 1), Geschwindigkeit
 export const needle = { pos: 0, vel: 0 };
 
@@ -26,16 +29,17 @@ export function barOffset(theta = swing.theta) {
   return { y: SWING.LENGTH * (1 - Math.cos(theta)), z: SWING.LENGTH * Math.sin(theta) };
 }
 
-// Punkt (y, z) relativ zur Drehachse → Koordinaten des Magneten: u entlang der Schenkel, w quer zum Spalt
-// (der Magnet ist um −α um die x-Achse gedreht, also hier um +α zurückdrehen)
-export function toMagnetFrame({ y, z }, alphaDeg = state.magnetAngle) {
+// Punkt (y, z) relativ zur Ruhelage des Stabs → Koordinaten des Magneten: u entlang der Schenkel, w quer zum
+// Spalt (der Magnet ist um −α um die x-Achse gedreht, also hier um +α zurückdrehen, und um magnetZ verschoben)
+export function toMagnetFrame({ y, z }, alphaDeg = state.magnetAngle, magnetZ = magnetMotion.z) {
   const a = degToRad(alphaDeg);
+  z -= magnetZ;
   return { u: y * Math.sin(a) + z * Math.cos(a), w: y * Math.cos(a) - z * Math.sin(a) };
 }
 
 // Berührt der Stab (Querschnitt: Kreis) den Magneten? Schenkel als Rechtecke, Bogen als halber Kreisring.
-export function collides(theta, alphaDeg) {
-  const { u, w } = toMagnetFrame(barOffset(theta), alphaDeg);
+export function collides(theta, alphaDeg, magnetZ = 0) {
+  const { u, w } = toMagnetFrame(barOffset(theta), alphaDeg, magnetZ);
   const r = SWING.BAR_R, inner = MAGNET.GAP / 2, outer = inner + MAGNET.THICK;
   for (const sign of [1, -1]) {
     const du = Math.max(MAGNET.Z_IN - u, u - MAGNET.Z_OPEN, 0);
@@ -49,7 +53,7 @@ export function collides(theta, alphaDeg) {
   return false;
 }
 
-// Bewegungsbereich der Schaukel [θmin, θmax] bei Magnetwinkel α (abgetastet, zwischengespeichert)
+// Bewegungsbereich der Schaukel [θmin, θmax] beim drehbaren Magneten mit Winkel α (abgetastet, zwischengespeichert)
 const limitCache = new Map();
 export function swingLimits(alphaDeg = state.magnetAngle) {
   const key = Math.round(alphaDeg * 10);
@@ -89,9 +93,15 @@ export function barVelocity() {
   return { x: 0, y: v * Math.sin(swing.theta), z: v * Math.cos(swing.theta) };
 }
 
+// Geschwindigkeit des Stabs relativ zum Magneten in m/s – nur sie zählt für die Induktion
+export function relativeVelocity() {
+  const v = barVelocity();
+  return { x: 0, y: v.y, z: v.z - magnetMotion.v };
+}
+
 // Induktionsspannung in V: U = l · (v × B) · x̂, positiv = rechtes Stabende (+x) ist Pluspol
 export function emf() {
-  const v = barVelocity(), B = fieldAtBar();
+  const v = relativeVelocity(), B = fieldAtBar();
   return L_FIELD * (v.y * B.z - v.z * B.y);
 }
 
@@ -120,6 +130,10 @@ function stepSwing(dt) {
       + brakeForce() / (SWING_MASS * PENDULUM_L);
     swing.omega += acc * dt;
   }
+  if (state.setup === 'tisch') {
+    moveSwingTo(swing.theta + swing.omega * dt);
+    return;
+  }
   swing.theta += swing.omega * dt;
   // Anschlag am Magneten (bzw. größte Auslenkung): kaum Rückprall
   const [lo, hi] = swingLimits();
@@ -127,6 +141,50 @@ function stepSwing(dt) {
     swing.theta = clamp(swing.theta, lo, hi);
     swing.omega = swing.dragging ? 0 : -0.2 * swing.omega;
   }
+}
+
+// Magnet auf dem Tisch: Schaukel bis zur Berührung mit dem Magneten bzw. zur größten Auslenkung bewegen
+function moveSwingTo(theta) {
+  const max = degToRad(SWING.MAX_ANGLE);
+  const blocked = t => Math.abs(t) > max || collides(t, 0, magnetMotion.z);
+  if (!blocked(theta)) {
+    swing.theta = theta;
+    return;
+  }
+  // Berührpunkt zwischen alter (freier) und neuer Lage suchen
+  let free = swing.theta, hit = theta;
+  for (let i = 0; i < 20; i++) {
+    const mid = (free + hit) / 2;
+    if (blocked(mid)) hit = mid; else free = mid;
+  }
+  swing.theta = free;
+  swing.omega = swing.dragging ? 0 : -0.2 * swing.omega;
+}
+
+// Magnet auf dem Tisch ziehen. Stößt er an den Stab, schiebt er die Schaukel vor sich her;
+// geht das nicht weiter (größte Auslenkung), bleibt er stehen.
+function stepMagnet(dt) {
+  if (!magnetMotion.dragging) {
+    magnetMotion.v = 0;
+    return;
+  }
+  const maxStep = MAGNET_DRAG_MAX_SPEED * 100 * dt;
+  const step = clamp((magnetMotion.target - magnetMotion.z) * dt / DRAG_TIME, -maxStep, maxStep);
+  const z = clamp(magnetMotion.z + step, MAGNET_Z_MIN, MAGNET_Z_MAX);
+  if (collides(swing.theta, 0, z)) {
+    const max = degToRad(SWING.MAX_ANGLE), dir = Math.sign(step), dTheta = degToRad(0.05);
+    let theta = swing.theta;
+    do theta += dir * dTheta; while (Math.abs(theta) <= max && collides(theta, 0, z));
+    if (Math.abs(theta) > max) {
+      magnetMotion.v = 0;
+      return;
+    }
+    // Die Schaukel bewegt sich mit dem Magneten mit
+    swing.theta = theta;
+    swing.omega = (z - magnetMotion.z) / 100 / dt / (PENDULUM_L * Math.cos(theta));
+  }
+  magnetMotion.v = (z - magnetMotion.z) / 100 / dt;
+  magnetMotion.z = z;
 }
 
 // Zeiger: gedämpfter Schwinger, der dem Messwert folgt; Anschläge knapp hinter dem Skalenende
@@ -158,6 +216,7 @@ export function stepPhysics(dt) {
   const SUBSTEPS = 8;
   const h = dt / SUBSTEPS;
   for (let i = 0; i < SUBSTEPS; i++) {
+    stepMagnet(h);
     turnMagnet(h);
     stepSwing(h);
     stepNeedle(h);
@@ -178,18 +237,52 @@ export function endDrag() {
   swing.dragging = false;
 }
 
-// Schaukel nach vorne auslenken und ruhig loslassen
+export function startMagnetDrag(z) {
+  magnetMotion.dragging = true;
+  dragMagnetTo(z);
+}
+export function dragMagnetTo(z) {
+  magnetMotion.target = clamp(z, MAGNET_Z_MIN, MAGNET_Z_MAX);
+}
+export function endMagnetDrag() {
+  magnetMotion.dragging = false;
+}
+
+// Schaukel nach vorne auslenken und ruhig loslassen (nur so weit, wie der Magnet es zulässt)
 export function pushSwing() {
   swing.dragging = false;
-  swing.theta = Math.min(degToRad(PUSH_ANGLE), swingLimits()[1]);
   swing.omega = 0;
+  if (state.setup === 'drehbar') {
+    swing.theta = Math.min(degToRad(PUSH_ANGLE), swingLimits()[1]);
+    return;
+  }
+  let theta = restingTheta();
+  const step = degToRad(0.1);
+  while (theta + step <= degToRad(PUSH_ANGLE) && !collides(theta + step, 0, magnetMotion.z)) theta += step;
+  swing.theta = theta;
+}
+
+// Ruhelage der Schaukel: senkrecht, oder – wenn dort der Magnet im Weg ist – an ihn angelehnt
+function restingTheta() {
+  const step = degToRad(0.05), max = degToRad(SWING.MAX_ANGLE);
+  for (let theta = 0; theta <= max; theta += step) {
+    if (!collides(theta, 0, magnetMotion.z)) return theta;
+    if (!collides(-theta, 0, magnetMotion.z)) return -theta;
+  }
+  return 0;
 }
 
 export function stopSwing() {
   Object.assign(swing, { theta: 0, omega: 0, dragging: false, target: 0 });
+  if (state.setup === 'tisch') swing.theta = restingTheta();
+}
+
+export function resetMagnet() {
+  Object.assign(magnetMotion, { z: 0, v: 0, dragging: false, target: 0 });
 }
 
 export function resetPhysics() {
   stopSwing();
+  resetMagnet();
   Object.assign(needle, { pos: 0, vel: 0 });
 }

@@ -1,12 +1,12 @@
 // ------------------------------------------------------------------
-// Versuchsaufbau: Stativ mit Querstange, Leiterschaukel, drehbarer Hufeisenmagnet mit Halter
+// Versuchsaufbau: Stativ mit Querstange, Leiterschaukel, Hufeisenmagnet (im Drehgelenk oder auf dem Tisch)
 // Die Schaukel hat eine eigene Gruppe (swingGroup) mit dem Stab als Kind (bar) – dort kann später
 // die mikroskopische Ansicht (Elektronen im Stab) angehängt werden.
 // ------------------------------------------------------------------
 import * as THREE from 'three';
-import { AXIS_Y, PIVOT_Y, SWING, STAND, MAGNET } from './config.js';
+import { AXIS_Y, PIVOT_Y, SWING, STAND, MAGNET, SETUPS } from './config.js';
 import { state } from './state.js';
-import { swing } from './physik.js';
+import { swing, magnetMotion } from './physik.js';
 import { addMesh, makeLabel, textTexture } from './hilfen.js';
 import { mat } from './materialien.js';
 import { scene } from './szene.js';
@@ -14,6 +14,9 @@ import { scene } from './szene.js';
 const rod = (radius, length, material, parent) => addMesh(new THREE.CylinderGeometry(radius, radius, length, 24), material, parent);
 
 // ---------------- Stativ: zwei Stangen auf Fußplatten, Querstange mit Aufhängungen und Buchsen
+// Querstange, Muffen und Schaukel bilden eine Gruppe, die je nach Versuch höher oder tiefer eingespannt wird.
+const rig = new THREE.Group();
+scene.add(rig);
 
 for (const side of [-1, 1]) {
   const x = side * STAND.X;
@@ -21,28 +24,28 @@ for (const side of [-1, 1]) {
   base.position.set(x, 0.6, 0);
   const pole = rod(STAND.R, STAND.TOP - 1.2, mat.rod, scene);
   pole.position.set(x, 1.2 + (STAND.TOP - 1.2) / 2, 0);
-  const sleeve = addMesh(new THREE.BoxGeometry(2.6, 2.6, 2.6), mat.clamp, scene);   // Muffe
+  const sleeve = addMesh(new THREE.BoxGeometry(2.6, 2.6, 2.6), mat.clamp, rig);   // Muffe
   sleeve.position.set(x, PIVOT_Y, 0);
 }
-const crossbar = rod(0.5, 2 * STAND.X, mat.rod, scene);
+const crossbar = rod(0.5, 2 * STAND.X, mat.rod, rig);
 crossbar.rotation.z = Math.PI / 2;
 crossbar.position.set(0, PIVOT_Y, 0);
 
 // Isolierte Aufhängung je Bügel mit Buchse (links schwarz, rechts rot) für die Kabel zum Messgerät
-export const SOCKETS = {};
 for (const side of [-1, 1]) {
-  const block = addMesh(new THREE.BoxGeometry(4, 2.2, 2.2), mat.insulator, scene);
+  const block = addMesh(new THREE.BoxGeometry(4, 2.2, 2.2), mat.insulator, rig);
   block.position.set(side * (SWING.HANGER_X + 1), PIVOT_Y, 0);
-  const socket = rod(0.55, 1.2, side > 0 ? mat.cableRed : mat.cableBlack, scene);
+  const socket = rod(0.55, 1.2, side > 0 ? mat.cableRed : mat.cableBlack, rig);
   socket.position.set(side * (SWING.HANGER_X + 2), PIVOT_Y + 1.6, 0);
-  SOCKETS[side > 0 ? 'right' : 'left'] = new THREE.Vector3(side * (SWING.HANGER_X + 2), PIVOT_Y + 2.2, 0);
 }
+// Steckerpunkt der Buchse (side −1 links, +1 rechts) in Weltkoordinaten
+export const socketPoint = side => new THREE.Vector3(side * (SWING.HANGER_X + 2), PIVOT_Y + 2.2 + rig.position.y, 0);
 
 // ---------------- Leiterschaukel: hängt an der Querstange, dreht sich um die x-Achse
 
 export const swingGroup = new THREE.Group();
 swingGroup.position.set(0, PIVOT_Y, 0);
-scene.add(swingGroup);
+rig.add(swingGroup);
 
 for (const side of [-1, 1]) {
   const hanger = rod(SWING.HANGER_R, SWING.LENGTH, mat.brass, swingGroup);
@@ -72,11 +75,15 @@ export const grabTargets = [];
   }
 }
 
-// ---------------- Hufeisenmagnet (Koordinaten des Magneten, siehe config.js), dreht sich um die Stabachse
+// ---------------- Hufeisenmagnet (Koordinaten des Magneten, siehe config.js)
+// Drehbarer Magnet: dreht sich um die Stabachse. Magnet auf dem Tisch: liegt flach, nach vorne/hinten verschiebbar.
 
 const magnet = new THREE.Group();
 magnet.position.set(0, AXIS_Y, 0);
 scene.add(magnet);
+
+// Körper des Magneten, an denen man ihn (auf dem Tisch) greifen kann
+export const magnetTargets = [];
 
 const inner = MAGNET.GAP / 2, outer = inner + MAGNET.THICK;
 const legLength = MAGNET.Z_OPEN - MAGNET.Z_IN;
@@ -93,7 +100,7 @@ const legOffset = inner + MAGNET.THICK / 2;
   const geometry = new THREE.ExtrudeGeometry(shape, { depth: MAGNET.WIDTH, bevelEnabled: false, curveSegments: 40 });
   geometry.translate(0, 0, -MAGNET.WIDTH / 2);
   geometry.rotateY(-Math.PI / 2);   // Formebene → z-y-Ebene, Extrusion → entlang x
-  addMesh(geometry, mat.yoke, magnet);
+  magnetTargets.push(addMesh(geometry, mat.yoke, magnet));
 }
 
 // Schenkel: in Grundstellung oben Nordpol (rot), unten Südpol (grün)
@@ -102,6 +109,7 @@ const upperLeg = addMesh(legGeometry, mat.north, magnet);
 upperLeg.position.set(0, legOffset, (MAGNET.Z_IN + MAGNET.Z_OPEN) / 2);
 const lowerLeg = addMesh(legGeometry, mat.south, magnet);
 lowerLeg.position.set(0, -legOffset, (MAGNET.Z_IN + MAGNET.Z_OPEN) / 2);
+magnetTargets.push(upperLeg, lowerLeg);
 
 // Polbeschriftungen: Stirnseite, beide Seitenflächen und Außenfläche der Schenkel
 const upperLabels = [], lowerLabels = [];
@@ -127,18 +135,22 @@ for (const [list, sign] of [[upperLabels, 1], [lowerLabels, -1]]) {
 // Bogens an, wohin der Stab nie kommt, und liegt außerhalb der Bügel der Schaukel.
 const yokeMid = MAGNET.Z_IN - (inner + outer) / 2;
 const armX = MAGNET.HOLDER_X - 0.6;
+const holderArm = new THREE.Group();   // nur beim drehbaren Magneten
+magnet.add(holderArm);
 {
   // eigene Materialien, da der ganze Magnet beim Umdrehen überblendet wird
   const holderMat = mat.holder.clone(), pointerMat = mat.cableRed.clone();
-  const cross = addMesh(new THREE.BoxGeometry(armX - MAGNET.WIDTH / 2 + 0.4, 1.4, 1.4), holderMat, magnet);
+  const cross = addMesh(new THREE.BoxGeometry(armX - MAGNET.WIDTH / 2 + 0.4, 1.4, 1.4), holderMat, holderArm);
   cross.position.set((MAGNET.WIDTH / 2 + armX) / 2, 0, yokeMid);
-  const radial = addMesh(new THREE.BoxGeometry(0.8, 1.4, -yokeMid + 0.7), holderMat, magnet);
+  const radial = addMesh(new THREE.BoxGeometry(0.8, 1.4, -yokeMid + 0.7), holderMat, holderArm);
   radial.position.set(armX, 0, yokeMid / 2);
-  const pointer = addMesh(new THREE.BoxGeometry(0.12, 0.3, 4), pointerMat, magnet);   // Zeiger der Winkelskala
+  const pointer = addMesh(new THREE.BoxGeometry(0.12, 0.3, 4), pointerMat, holderArm);   // Zeiger der Winkelskala
   pointer.position.set(MAGNET.HOLDER_X + 1.12, 0, -2);
 }
 
-// Drehgelenk mit Winkelskala (fest), auf eigener Stativstange
+// Drehgelenk mit Winkelskala (fest), auf eigener Stativstange – nur beim drehbaren Magneten
+const holderStand = new THREE.Group();
+scene.add(holderStand);
 function angleScaleTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 512;
@@ -167,28 +179,28 @@ function angleScaleTexture() {
   return texture;
 }
 {
-  const hub = rod(4.2, 1, mat.holder, scene);
+  const hub = rod(4.2, 1, mat.holder, holderStand);
   hub.rotation.z = Math.PI / 2;
   hub.position.set(MAGNET.HOLDER_X + 0.5, AXIS_Y, 0);
   const face = new THREE.Mesh(new THREE.CircleGeometry(4, 48), new THREE.MeshBasicMaterial({ map: angleScaleTexture() }));
   face.rotation.y = Math.PI / 2;
   face.position.set(MAGNET.HOLDER_X + 1.02, AXIS_Y, 0);
-  scene.add(face);
-  const axle = rod(0.35, 1.6, mat.clamp, scene);
+  holderStand.add(face);
+  const axle = rod(0.35, 1.6, mat.clamp, holderStand);
   axle.rotation.z = Math.PI / 2;
   axle.position.set(MAGNET.HOLDER_X + 1.2, AXIS_Y, 0);
   // Stativstange hinter dem Gelenk, damit die Skala frei bleibt
   const standX = MAGNET.HOLDER_X + 2.4;
-  const stub = rod(0.4, 1.8, mat.rod, scene);
+  const stub = rod(0.4, 1.8, mat.rod, holderStand);
   stub.rotation.z = Math.PI / 2;
   stub.position.set(MAGNET.HOLDER_X + 1.5, AXIS_Y, -4.6);
-  const link = addMesh(new THREE.BoxGeometry(0.8, 1.2, 4.6), mat.holder, scene);
+  const link = addMesh(new THREE.BoxGeometry(0.8, 1.2, 4.6), mat.holder, holderStand);
   link.position.set(MAGNET.HOLDER_X + 0.5, AXIS_Y, -2.3);
-  const pole = rod(0.6, AXIS_Y + 1, mat.rod, scene);
+  const pole = rod(0.6, AXIS_Y + 1, mat.rod, holderStand);
   pole.position.set(standX, (AXIS_Y + 1) / 2 + 0.6, -4.6);
-  const sleeve = addMesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), mat.clamp, scene);
+  const sleeve = addMesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), mat.clamp, holderStand);
   sleeve.position.set(standX, AXIS_Y, -4.6);
-  const base = addMesh(new THREE.BoxGeometry(5, 1.2, 9), mat.standBase, scene);
+  const base = addMesh(new THREE.BoxGeometry(5, 1.2, 9), mat.standBase, holderStand);
   base.position.set(standX, 0.6, -6);
 }
 
@@ -197,6 +209,17 @@ function angleScaleTexture() {
 export function syncApparatus() {
   swingGroup.rotation.x = -swing.theta;
   magnet.rotation.x = -THREE.MathUtils.degToRad(state.magnetAngle);
+  magnet.position.z = magnetMotion.z;
+}
+
+// Versuch einstellen: Höhe der Querstange und des Magneten, Halter ein- oder ausblenden
+export function applySetup() {
+  const axisY = SETUPS[state.setup].axisY;
+  rig.position.y = axisY - AXIS_Y;
+  magnet.position.y = axisY;
+  const rotatable = state.setup === 'drehbar';
+  holderArm.visible = holderStand.visible = rotatable;
+  syncApparatus();
 }
 
 // Farben und Beschriftungen passend zur Polung des Magneten

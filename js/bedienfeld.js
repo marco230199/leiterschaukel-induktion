@@ -3,9 +3,10 @@
 // ------------------------------------------------------------------
 import { METER } from './config.js';
 import { state } from './state.js';
-import { pushSwing, stopSwing, meterReading } from './physik.js';
-import { applyMagnetPoles, setMagnetOpacity } from './aufbau.js';
-import { updateMeterFace } from './messgeraet.js';
+import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet } from './physik.js';
+import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus } from './aufbau.js';
+import { updateMeterFace, buildCables } from './messgeraet.js';
+import { cancelDrag } from './ziehen.js';
 import { resetView } from './szene.js';
 import { formatNumber } from './hilfen.js';
 
@@ -17,9 +18,16 @@ const FLIP_DURATION = 0.8;
 const flip = { active: false, t: 0, swapped: false };
 
 function updateUi() {
-  $('magnetStatus').textContent = state.northUp
-    ? 'Nordpol (rot) oben, Südpol (grün) unten – bei α = 0°'
-    : 'Südpol (grün) oben, Nordpol (rot) unten – bei α = 0°';
+  const rotatable = state.setup === 'drehbar';
+  for (const [id, setup] of [['setupDrehbarBtn', 'drehbar'], ['setupTischBtn', 'tisch']]) {
+    $(id).classList.toggle('active', state.setup === setup);
+    $(id).setAttribute('aria-pressed', String(state.setup === setup));
+  }
+  $('angleControls').hidden = !rotatable;
+  $('tableControls').hidden = rotatable;
+  $('magnetStatus').textContent = (state.northUp
+    ? 'Nordpol (rot) oben, Südpol (grün) unten'
+    : 'Südpol (grün) oben, Nordpol (rot) unten') + (rotatable ? ' – bei α = 0°' : '');
   $('flipBtn').disabled = flip.active;
   $('angleOut').textContent = state.angle + '°';
   for (const [id, mode] of [['modeUBtn', 'U'], ['modeIBtn', 'I']]) {
@@ -65,6 +73,26 @@ export function animateFlip(dt) {
   }
 }
 
+// Versuch wechseln: Magnet in Grundstellung, Schaukel in Ruhe, Querstange und Kabel neu, Startansicht
+function setSetup(setup) {
+  if (setup === state.setup) return;
+  cancelDrag();
+  if (flip.active) {   // laufendes Umdrehen sofort abschließen
+    if (!flip.swapped) state.northUp = !state.northUp;
+    flip.active = false;
+    applyMagnetPoles();
+    setMagnetOpacity(1);
+  }
+  state.setup = setup;
+  state.angle = state.magnetAngle = 0;
+  $('angleSlider').value = 0;
+  resetPhysics();
+  applySetup();
+  buildCables();
+  resetView();
+  updateUi();
+}
+
 export function initUi() {
   for (const range of METER.RANGES) {
     const button = document.createElement('button');
@@ -79,6 +107,14 @@ export function initUi() {
   $('angleSlider').value = state.angle;
 
   $('resetView').addEventListener('click', resetView);
+  $('setupDrehbarBtn').addEventListener('click', () => setSetup('drehbar'));
+  $('setupTischBtn').addEventListener('click', () => setSetup('tisch'));
+  $('resetMagnetBtn').addEventListener('click', () => {
+    cancelDrag();
+    resetMagnet();
+    stopSwing();
+    syncApparatus();
+  });
   $('pushBtn').addEventListener('click', pushSwing);
   $('stopBtn').addEventListener('click', stopSwing);
   $('slowCheck').addEventListener('change', e => { state.slowMotion = e.target.checked; });
@@ -94,5 +130,7 @@ export function initUi() {
   $('valueCheck').addEventListener('change', e => { state.showValue = e.target.checked; updateUi(); });
 
   applyMagnetPoles();
+  applySetup();
+  buildCables();
   updateUi();
 }

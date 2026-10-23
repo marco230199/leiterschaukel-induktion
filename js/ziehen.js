@@ -1,18 +1,21 @@
 // ------------------------------------------------------------------
-// Schaukel mit Maus oder Finger ziehen. Greift man daneben, dreht sich wie gewohnt die Ansicht.
+// Schaukel (und beim Versuch „Magnet auf dem Tisch“ den Magneten) mit Maus oder Finger ziehen.
+// Greift man daneben, dreht sich wie gewohnt die Ansicht.
 // ------------------------------------------------------------------
 import * as THREE from 'three';
-import { PIVOT_Y } from './config.js';
-import { startDrag, dragTo, endDrag } from './physik.js';
-import { grabTargets } from './aufbau.js';
+import { SWING, SETUPS } from './config.js';
+import { state } from './state.js';
+import { startDrag, dragTo, endDrag, magnetMotion, startMagnetDrag, dragMagnetTo, endMagnetDrag } from './physik.js';
+import { grabTargets, magnetTargets } from './aufbau.js';
 import { renderer, camera, controls } from './szene.js';
 
 const canvas = renderer.domElement;
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
-const plane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);   // Schwingebene x = const
+const plane = new THREE.Plane();
 const hit = new THREE.Vector3();
-let activeId = null;
+// Laufender Zug: was gezogen wird ('swing' | 'magnet'), Zeiger-ID und beim Magneten der Startpunkt
+let drag = null;
 
 function setRay(event) {
   const rect = canvas.getBoundingClientRect();
@@ -20,44 +23,70 @@ function setRay(event) {
   raycaster.setFromCamera(pointer, camera);
 }
 
-// Winkel der Schaukel, bei dem sie durch den Punkt unter dem Finger geht
-function angleAtPointer() {
-  if (!raycaster.ray.intersectPlane(plane, hit)) return null;
-  return Math.atan2(hit.z, PIVOT_Y - hit.y);
+// Was liegt unter dem Finger? Der Magnet lässt sich nur auf dem Tisch verschieben.
+function pick() {
+  const targets = state.setup === 'tisch' ? [...grabTargets, ...magnetTargets] : grabTargets;
+  const first = raycaster.intersectObjects(targets, false)[0];
+  if (!first) return null;
+  return { kind: magnetTargets.includes(first.object) ? 'magnet' : 'swing', point: first.point };
 }
 
-const grabbed = () => raycaster.intersectObjects(grabTargets, false)[0];
+// Schaukel: Winkel, bei dem sie durch den Punkt unter dem Finger geht (Schwingebene x = const)
+// Magnet: Punkt in der waagrechten Ebene, in der er gegriffen wurde
+function pointerOnPlane() {
+  return raycaster.ray.intersectPlane(plane, hit);
+}
+const pivotY = () => SETUPS[state.setup].axisY + SWING.LENGTH;
+const swingAngle = p => Math.atan2(p.z, pivotY() - p.y);
 
 // Erfassungsphase: läuft vor den OrbitControls, die dann für diesen Zug abgeschaltet werden
 canvas.addEventListener('pointerdown', event => {
-  if (activeId !== null) return;
+  if (drag) return;
   setRay(event);
-  const target = grabbed();
+  const target = pick();
   if (!target) return;
-  activeId = event.pointerId;
+  drag = { kind: target.kind, id: event.pointerId };
   controls.enabled = false;
-  plane.constant = -target.point.x;
   canvas.setPointerCapture(event.pointerId);
   canvas.style.cursor = 'grabbing';
-  startDrag(angleAtPointer() ?? 0);
+  if (target.kind === 'swing') {
+    plane.set(new THREE.Vector3(1, 0, 0), -target.point.x);
+    startDrag(swingAngle(target.point));
+  } else {
+    plane.set(new THREE.Vector3(0, 1, 0), -target.point.y);
+    Object.assign(drag, { startZ: magnetMotion.z, startHitZ: target.point.z });
+    startMagnetDrag(magnetMotion.z);
+  }
 }, { capture: true });
 
 canvas.addEventListener('pointermove', event => {
   setRay(event);
-  if (event.pointerId !== activeId) {
-    if (activeId === null && event.pointerType === 'mouse') canvas.style.cursor = grabbed() ? 'grab' : '';
+  if (!drag || event.pointerId !== drag.id) {
+    if (!drag && event.pointerType === 'mouse') canvas.style.cursor = pick() ? 'grab' : '';
     return;
   }
-  const theta = angleAtPointer();
-  if (theta !== null) dragTo(theta);
+  const p = pointerOnPlane();
+  if (!p) return;
+  if (drag.kind === 'swing') dragTo(swingAngle(p));
+  else dragMagnetTo(drag.startZ + p.z - drag.startHitZ);
 });
 
 function release(event) {
-  if (event.pointerId !== activeId) return;
-  activeId = null;
-  endDrag();
+  if (!drag || event.pointerId !== drag.id) return;
+  if (drag.kind === 'swing') endDrag(); else endMagnetDrag();
+  drag = null;
   controls.enabled = true;
   canvas.style.cursor = '';
 }
 canvas.addEventListener('pointerup', release);
 canvas.addEventListener('pointercancel', release);
+
+// Laufenden Zug abbrechen (z. B. beim Wechsel des Versuchs)
+export function cancelDrag() {
+  if (!drag) return;
+  endDrag();
+  endMagnetDrag();
+  drag = null;
+  controls.enabled = true;
+  canvas.style.cursor = '';
+}

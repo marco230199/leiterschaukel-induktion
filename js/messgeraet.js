@@ -8,7 +8,7 @@ import { needle } from './physik.js';
 import { addMesh, makeLabel, formatNumber } from './hilfen.js';
 import { mat } from './materialien.js';
 import { scene } from './szene.js';
-import { SOCKETS } from './aufbau.js';
+import { socketPoint } from './aufbau.js';
 
 const meter = new THREE.Group();
 meter.position.set(40, 0, 8);
@@ -177,12 +177,33 @@ function intoSocket(local) {
 }
 
 const from = p => [p.toArray(), [p.x * 1.05, p.y + 2.2, 0.4]];
-// rechts (rot): vor dem Stativ schräg nach unten zum Messgerät
-makeCable([
-  ...from(SOCKETS.right), [12.5, 43.5, 2], [20, 32, 7], [24, 12, 12], [27, 0.4, 16], ...intoSocket(SOCKET_PLUS),
-], mat.cableRed);
-// links (schwarz): hinter dem Stativ herunter und hinten über den Tisch
-makeCable([
-  ...from(SOCKETS.left), [-13, 43, -2], [-21, 30, -7], [-23, 8, -10], [-18, 0.4, -15], [2, 0.4, -18], [18, 0.4, -12],
-  [21, 0.4, 4], [23, 0.4, 15], ...intoSocket(SOCKET_COM),
-], mat.cableBlack);
+
+// Verlauf der Kabel (P: Höhe der Querstange). Rechts (rot): vor dem Stativ schräg nach unten zum Messgerät.
+// Links (schwarz): hinter dem Stativ herunter und hinten über den Tisch – beim Magneten auf dem Tisch weiter
+// hinten, damit der verschobene Magnet nicht darüber liegt.
+const ROUTES = {
+  drehbar: P => ({
+    red: [[12.5, P + 3.5, 2], [20, P - 8, 7], [24, 12, 12], [27, 0.4, 16]],
+    black: [[-13, P + 3, -2], [-21, P - 10, -7], [-23, 8, -10], [-18, 0.4, -15], [2, 0.4, -18], [22.8, 0.4, -12],
+      [22.8, 0.4, 3], [22.5, 0.4, 14]],
+  }),
+  tisch: P => ({
+    red: [[12.5, P + 3.5, 2], [20, P - 8, 7], [24, 8, 12], [27, 0.4, 16]],
+    black: [[-13, P + 3, -2], [-21, P - 10, -7], [-23, 6, -14], [-20, 0.4, -30], [0, 0.4, -44], [22.8, 0.4, -36],
+      [22.8, 0.4, 3], [22.5, 0.4, 14]],
+  }),
+};
+
+let cables = [];
+export function buildCables() {
+  for (const cable of cables) {
+    scene.remove(cable);
+    cable.geometry.dispose();
+  }
+  const right = socketPoint(1), left = socketPoint(-1);
+  const route = ROUTES[state.setup](right.y - 2.2);
+  cables = [
+    makeCable([...from(right), ...route.red, ...intoSocket(SOCKET_PLUS)], mat.cableRed),
+    makeCable([...from(left), ...route.black, ...intoSocket(SOCKET_COM)], mat.cableBlack),
+  ];
+}

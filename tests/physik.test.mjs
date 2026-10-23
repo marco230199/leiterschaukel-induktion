@@ -96,3 +96,49 @@ test('Zeiger folgt dem Messwert und bleibt am Anschlag', () => {
   pushSwing();
   assert.ok(swing.theta > 0);
 });
+
+// ---------------- Magnet auf dem Tisch
+
+import { magnetMotion, startMagnetDrag, dragMagnetTo, endMagnetDrag, stopSwing } from '../js/physik.js';
+
+function tisch() {
+  Object.assign(state, { setup: 'tisch', northUp: true, angle: 0, magnetAngle: 0, meterMode: 'U', range: 3, brakeBoost: false });
+  resetPhysics();
+}
+
+test('Tisch: Magnet bewegen statt Schaukel – gleiche Relativbewegung, gleiche Spannung', () => {
+  // Schaukel ruht, Magnet wird nach hinten gezogen (Stab bewegt sich relativ nach vorne)
+  tisch();
+  startMagnetDrag(0);
+  let magnetU = 0;
+  for (let i = 0; i < 30; i++) { dragMagnetTo(-0.5 * (i + 1)); stepPhysics(1 / 60); magnetU = Math.max(magnetU, emf()); }
+  endMagnetDrag();
+  assert.equal(swing.theta, 0, 'Schaukel bleibt in Ruhe');
+  // Schaukel wird nach vorne gezogen, Magnet ruht
+  tisch();
+  startDrag(0);
+  let swingU = 0;
+  for (let i = 0; i < 30; i++) { dragTo(Math.asin(0.5 * (i + 1) / SWING.LENGTH)); stepPhysics(1 / 60); swingU = Math.max(swingU, emf()); }
+  endDrag();
+  assert.ok(magnetU > 0 && swingU > 0, 'gleiches Vorzeichen');
+  assert.ok(Math.abs(magnetU / swingU - 1) < 0.15, `${magnetU} vs. ${swingU}`);
+});
+
+test('Tisch: Magnet nach vorne schieben – der Bogen schiebt die Schaukel mit, ohne einzudringen', () => {
+  tisch();
+  startMagnetDrag(0);
+  for (let i = 0; i < 120; i++) {
+    dragMagnetTo(0.25 * (i + 1));
+    stepPhysics(1 / 60);
+    assert.ok(!collides(swing.theta, 0, magnetMotion.z), `Schritt ${i}`);
+  }
+  endMagnetDrag();
+  assert.ok(swing.theta > rad(10), 'Schaukel wurde nach vorne gedrückt');
+  for (let i = 0; i < 120; i++) {
+    stepPhysics(1 / 60);
+    assert.ok(!collides(swing.theta, 0, magnetMotion.z));
+  }
+  stopSwing();
+  assert.ok(!collides(swing.theta, 0, magnetMotion.z), 'Anhalten: Schaukel lehnt am Magneten');
+  state.setup = 'drehbar';
+});

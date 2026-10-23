@@ -7,6 +7,14 @@ induziert, die ein großes Demonstrations-Zeigermessgerät (Nullpunkt in der Mit
 
 ## Funktionen
 
+Zwei Versuche, per Knopf umschaltbar:
+
+- **Drehbarer Magnet:** Der Magnet sitzt in einem Drehgelenk mit Winkelskala (siehe unten).
+- **Magnet auf dem Tisch:** Der Magnet liegt flach auf dem Tisch und lässt sich mit Maus/Finger nach vorne
+  und hinten schieben. Die Querstange ist dafür tiefer am Stativ eingespannt. Entscheidend für die
+  Spannung ist die Relativbewegung: Magnet nach hinten ziehen wirkt wie Schaukel nach vorne bewegen.
+  Schiebt man den Magneten gegen den Stab, drückt der Bogen die Schaukel mit.
+
 - **Schaukel bewegen:** Stab oder Bügel mit Maus/Finger fassen und ziehen. Beim Loslassen schwingt die
   Schaukel gedämpft weiter. „Auslenken und loslassen“ startet eine gleichmäßige Schwingung, „Anhalten“
   bringt sie zur Ruhe. Am Magneten schlägt die Schaukel an.
@@ -44,7 +52,7 @@ leiterschaukel-induktion/
 │   ├── szene.js        # Renderer, Kamera, Licht, Tisch
 │   ├── aufbau.js       # Stativ, Leiterschaukel, Hufeisenmagnet mit Drehgelenk
 │   ├── messgeraet.js   # Zeigermessgerät und Kabel
-│   ├── ziehen.js       # Schaukel mit Maus/Finger ziehen
+│   ├── ziehen.js       # Schaukel bzw. Magnet (auf dem Tisch) mit Maus/Finger ziehen
 │   ├── bedienfeld.js   # Knöpfe, Regler, Anzeigen
 │   ├── hilfen.js       # Hilfsfunktionen
 │   └── materialien.js  # gemeinsame Materialien
@@ -63,6 +71,8 @@ leiterschaukel-induktion/
   F = I · l × B, immer gegen die Bewegung (Lenz). Real ist die Bremsung etwa 1000-mal schwächer als die
   Luftdämpfung, deshalb die verstärkbare Bremskraft als Gedankenexperiment.
 - Zeiger: gedämpfter Schwinger (Eigenfrequenz 1,2 Hz, Dämpfungsgrad 0,55), Anschlag bei 108 %.
+- Magnet auf dem Tisch: In U geht die Geschwindigkeit des Stabs relativ zum Magneten ein
+  (`relativeVelocity`).
 - Für eine spätere mikroskopische Ansicht liefert `physik.js` Geschwindigkeit des Stabs (`barVelocity`),
   Feld am Stab (`fieldAtBar`) und Spannung (`emf`); der Stab hat in `aufbau.js` eine eigene Gruppe
   (`swingGroup`/`bar`), an die sich Elektronen anhängen lassen.
