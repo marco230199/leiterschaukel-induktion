@@ -3,6 +3,7 @@
 // ------------------------------------------------------------------
 export const state = {
   setup: 'drehbar',   // 'drehbar' (Magnet im Drehgelenk) oder 'tisch' (Magnet liegt auf dem Tisch, verschiebbar)
+  longMagnet: false,  // langer Hufeisenmagnet (Schenkel 32 statt 11 cm)
   northUp: true,      // Nordpol am oberen Schenkel (in Grundstellung α = 0°)
   angle: 0,           // eingestellter Drehwinkel α des Magneten in Grad (0° … 90°)
   magnetAngle: 0,     // aktueller Drehwinkel (läuft dem eingestellten Winkel hinterher)

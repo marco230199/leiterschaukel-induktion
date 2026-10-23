@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------
 import {
   SWING, MAGNET, B_FIELD, L_FIELD, G, PENDULUM_L, SWING_MASS, AIR_DAMPING, CIRCUIT_R, BRAKE_BOOST,
-  MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, METER, MAGNET_Z_MIN, MAGNET_Z_MAX, MAGNET_DRAG_MAX_SPEED,
+  MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, PUSH_ANGLE_LONG, METER, MAGNET_DRAG_MAX_SPEED, magnetLegs, magnetZRange,
 } from './config.js';
 import { state } from './state.js';
 
@@ -41,13 +41,14 @@ export function toMagnetFrame({ y, z }, alphaDeg = state.magnetAngle, magnetZ = 
 export function collides(theta, alphaDeg, magnetZ = 0) {
   const { u, w } = toMagnetFrame(barOffset(theta), alphaDeg, magnetZ);
   const r = SWING.BAR_R, inner = MAGNET.GAP / 2, outer = inner + MAGNET.THICK;
+  const { Z_IN, Z_OPEN } = magnetLegs(state.longMagnet);
   for (const sign of [1, -1]) {
-    const du = Math.max(MAGNET.Z_IN - u, u - MAGNET.Z_OPEN, 0);
+    const du = Math.max(Z_IN - u, u - Z_OPEN, 0);
     const dw = Math.max(inner - sign * w, sign * w - outer, 0);
     if (du * du + dw * dw < r * r) return true;
   }
-  if (u <= MAGNET.Z_IN) {
-    const d = Math.hypot(u - MAGNET.Z_IN, w);
+  if (u <= Z_IN) {
+    const d = Math.hypot(u - Z_IN, w);
     if (d + r > inner && d - r < outer) return true;
   }
   return false;
@@ -56,12 +57,12 @@ export function collides(theta, alphaDeg, magnetZ = 0) {
 // Bewegungsbereich der Schaukel [θmin, θmax] beim drehbaren Magneten mit Winkel α (abgetastet, zwischengespeichert)
 const limitCache = new Map();
 export function swingLimits(alphaDeg = state.magnetAngle) {
-  const key = Math.round(alphaDeg * 10);
+  const key = Math.round(alphaDeg * 10) + (state.longMagnet ? 10000 : 0);
   if (!limitCache.has(key)) {
     const step = degToRad(0.1), max = degToRad(SWING.MAX_ANGLE);
     const scan = sign => {
       let theta = 0;
-      while (Math.abs(theta) < max && !collides(theta + sign * step, key / 10)) theta += sign * step;
+      while (Math.abs(theta) < max && !collides(theta + sign * step, Math.round(alphaDeg * 10) / 10)) theta += sign * step;
       return theta;
     };
     limitCache.set(key, [scan(-1), scan(1)]);
@@ -74,7 +75,8 @@ export function swingLimits(alphaDeg = state.magnetAngle) {
 // Anteil des Feldes am Ort des Stabs (1 im Polbereich und vor dem Bogen, Randfeld fällt linear ab)
 export function fieldFactor(theta = swing.theta, alphaDeg = state.magnetAngle) {
   const { u, w } = toMagnetFrame(barOffset(theta), alphaDeg);
-  const du = Math.max(MAGNET.Z_IN - MAGNET.GAP / 2 - u, u - MAGNET.Z_OPEN, 0);
+  const { Z_IN, Z_OPEN } = magnetLegs(state.longMagnet);
+  const du = Math.max(Z_IN - MAGNET.GAP / 2 - u, u - Z_OPEN, 0);
   const dw = Math.max(Math.abs(w) - MAGNET.GAP / 2, 0);
   return Math.max(0, 1 - Math.hypot(du, dw) / MAGNET.FRINGE);
 }
@@ -170,7 +172,7 @@ function stepMagnet(dt) {
   }
   const maxStep = MAGNET_DRAG_MAX_SPEED * 100 * dt;
   const step = clamp((magnetMotion.target - magnetMotion.z) * dt / DRAG_TIME, -maxStep, maxStep);
-  const z = clamp(magnetMotion.z + step, MAGNET_Z_MIN, MAGNET_Z_MAX);
+  const z = clamp(magnetMotion.z + step, ...magnetZRange(state.longMagnet));
   if (collides(swing.theta, 0, z)) {
     const max = degToRad(SWING.MAX_ANGLE), dir = Math.sign(step), dTheta = degToRad(0.05);
     let theta = swing.theta;
@@ -242,23 +244,25 @@ export function startMagnetDrag(z) {
   dragMagnetTo(z);
 }
 export function dragMagnetTo(z) {
-  magnetMotion.target = clamp(z, MAGNET_Z_MIN, MAGNET_Z_MAX);
+  magnetMotion.target = clamp(z, ...magnetZRange(state.longMagnet));
 }
 export function endMagnetDrag() {
   magnetMotion.dragging = false;
 }
+
+const pushAngle = () => (state.longMagnet ? PUSH_ANGLE_LONG : PUSH_ANGLE);
 
 // Schaukel nach vorne auslenken und ruhig loslassen (nur so weit, wie der Magnet es zulässt)
 export function pushSwing() {
   swing.dragging = false;
   swing.omega = 0;
   if (state.setup === 'drehbar') {
-    swing.theta = Math.min(degToRad(PUSH_ANGLE), swingLimits()[1]);
+    swing.theta = Math.min(degToRad(pushAngle()), swingLimits()[1]);
     return;
   }
   let theta = restingTheta();
   const step = degToRad(0.1);
-  while (theta + step <= degToRad(PUSH_ANGLE) && !collides(theta + step, 0, magnetMotion.z)) theta += step;
+  while (theta + step <= degToRad(pushAngle()) && !collides(theta + step, 0, magnetMotion.z)) theta += step;
   swing.theta = theta;
 }
 

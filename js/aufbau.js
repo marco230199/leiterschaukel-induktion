@@ -4,7 +4,7 @@
 // die mikroskopische Ansicht (Elektronen im Stab) angehängt werden.
 // ------------------------------------------------------------------
 import * as THREE from 'three';
-import { AXIS_Y, PIVOT_Y, SWING, STAND, MAGNET, SETUPS } from './config.js';
+import { AXIS_Y, PIVOT_Y, SWING, STAND, MAGNET, MAGNET_LONG, axisHeight } from './config.js';
 import { state } from './state.js';
 import { swing, magnetMotion } from './physik.js';
 import { addMesh, makeLabel, textTexture } from './hilfen.js';
@@ -82,63 +82,61 @@ const magnet = new THREE.Group();
 magnet.position.set(0, AXIS_Y, 0);
 scene.add(magnet);
 
-// Körper des Magneten, an denen man ihn (auf dem Tisch) greifen kann
-export const magnetTargets = [];
-
 const inner = MAGNET.GAP / 2, outer = inner + MAGNET.THICK;
-const legLength = MAGNET.Z_OPEN - MAGNET.Z_IN;
 const legOffset = inner + MAGNET.THICK / 2;
-
-// Bogen als extrudierter Halbring hinter dem Stab (Form in der z-y-Ebene, Extrusion entlang x)
-{
-  const shape = new THREE.Shape();
-  shape.moveTo(MAGNET.Z_IN, outer);
-  shape.absarc(MAGNET.Z_IN, 0, outer, Math.PI / 2, Math.PI * 1.5, false);
-  shape.lineTo(MAGNET.Z_IN, -inner);
-  shape.absarc(MAGNET.Z_IN, 0, inner, Math.PI * 1.5, Math.PI / 2, true);
-  shape.closePath();
-  const geometry = new THREE.ExtrudeGeometry(shape, { depth: MAGNET.WIDTH, bevelEnabled: false, curveSegments: 40 });
-  geometry.translate(0, 0, -MAGNET.WIDTH / 2);
-  geometry.rotateY(-Math.PI / 2);   // Formebene → z-y-Ebene, Extrusion → entlang x
-  magnetTargets.push(addMesh(geometry, mat.yoke, magnet));
-}
-
-// Schenkel: in Grundstellung oben Nordpol (rot), unten Südpol (grün)
-const legGeometry = new THREE.BoxGeometry(MAGNET.WIDTH, MAGNET.THICK, legLength);
-const upperLeg = addMesh(legGeometry, mat.north, magnet);
-upperLeg.position.set(0, legOffset, (MAGNET.Z_IN + MAGNET.Z_OPEN) / 2);
-const lowerLeg = addMesh(legGeometry, mat.south, magnet);
-lowerLeg.position.set(0, -legOffset, (MAGNET.Z_IN + MAGNET.Z_OPEN) / 2);
-magnetTargets.push(upperLeg, lowerLeg);
-
-// Polbeschriftungen: Stirnseite, beide Seitenflächen und Außenfläche der Schenkel
-const upperLabels = [], lowerLabels = [];
-for (const [list, sign] of [[upperLabels, 1], [lowerLabels, -1]]) {
-  const front = makeLabel('N', 2.6);
-  front.position.set(0, sign * legOffset, MAGNET.Z_OPEN + 0.02);
-  const left = makeLabel('N', 2.6);
-  left.rotation.y = -Math.PI / 2;
-  left.position.set(-MAGNET.WIDTH / 2 - 0.02, sign * legOffset, MAGNET.Z_OPEN - 2);
-  const right = makeLabel('N', 2.6);
-  right.rotation.y = Math.PI / 2;
-  right.position.set(MAGNET.WIDTH / 2 + 0.02, sign * legOffset, MAGNET.Z_OPEN - 2);
-  const outside = makeLabel('N', 4);
-  outside.rotation.x = -sign * Math.PI / 2;
-  outside.position.set(0, sign * (outer + 0.02), MAGNET.Z_OPEN - 3);
-  for (const label of [front, left, right, outside]) {
-    magnet.add(label);
-    list.push(label);
-  }
-}
-
-// Halter: Winkelstück vom Bogen zum Drehgelenk rechts neben dem Magneten. Es greift in der Mitte des
-// Bogens an, wohin der Stab nie kommt, und liegt außerhalb der Bügel der Schaukel.
-const yokeMid = MAGNET.Z_IN - (inner + outer) / 2;
 const armX = MAGNET.HOLDER_X - 0.6;
-const holderArm = new THREE.Group();   // nur beim drehbaren Magneten
-magnet.add(holderArm);
-{
-  // eigene Materialien, da der ganze Magnet beim Umdrehen überblendet wird
+
+// Magnetkörper (Bogen, Schenkel, Beschriftungen, Halterarm) für die Schenkellage { Z_IN, Z_OPEN }.
+// Es gibt einen kurzen und einen langen; sichtbar ist jeweils einer.
+function buildBody({ Z_IN, Z_OPEN }) {
+  const group = new THREE.Group();
+  magnet.add(group);
+
+  // Bogen als extrudierter Halbring hinter dem Stab (Form in der z-y-Ebene, Extrusion entlang x)
+  const shape = new THREE.Shape();
+  shape.moveTo(Z_IN, outer);
+  shape.absarc(Z_IN, 0, outer, Math.PI / 2, Math.PI * 1.5, false);
+  shape.lineTo(Z_IN, -inner);
+  shape.absarc(Z_IN, 0, inner, Math.PI * 1.5, Math.PI / 2, true);
+  shape.closePath();
+  const yokeGeometry = new THREE.ExtrudeGeometry(shape, { depth: MAGNET.WIDTH, bevelEnabled: false, curveSegments: 40 });
+  yokeGeometry.translate(0, 0, -MAGNET.WIDTH / 2);
+  yokeGeometry.rotateY(-Math.PI / 2);   // Formebene → z-y-Ebene, Extrusion → entlang x
+  const yoke = addMesh(yokeGeometry, mat.yoke, group);
+
+  // Schenkel: in Grundstellung oben Nordpol (rot), unten Südpol (grün)
+  const legGeometry = new THREE.BoxGeometry(MAGNET.WIDTH, MAGNET.THICK, Z_OPEN - Z_IN);
+  const upperLeg = addMesh(legGeometry, mat.north, group);
+  upperLeg.position.set(0, legOffset, (Z_IN + Z_OPEN) / 2);
+  const lowerLeg = addMesh(legGeometry, mat.south, group);
+  lowerLeg.position.set(0, -legOffset, (Z_IN + Z_OPEN) / 2);
+
+  // Polbeschriftungen: Stirnseite, beide Seitenflächen und Außenfläche der Schenkel
+  const upperLabels = [], lowerLabels = [];
+  for (const [list, sign] of [[upperLabels, 1], [lowerLabels, -1]]) {
+    const front = makeLabel('N', 2.6);
+    front.position.set(0, sign * legOffset, Z_OPEN + 0.02);
+    const left = makeLabel('N', 2.6);
+    left.rotation.y = -Math.PI / 2;
+    left.position.set(-MAGNET.WIDTH / 2 - 0.02, sign * legOffset, Z_OPEN - 2);
+    const right = makeLabel('N', 2.6);
+    right.rotation.y = Math.PI / 2;
+    right.position.set(MAGNET.WIDTH / 2 + 0.02, sign * legOffset, Z_OPEN - 2);
+    const outside = makeLabel('N', 4);
+    outside.rotation.x = -sign * Math.PI / 2;
+    outside.position.set(0, sign * (outer + 0.02), Z_OPEN - 3);
+    for (const label of [front, left, right, outside]) {
+      group.add(label);
+      list.push(label);
+    }
+  }
+
+  // Halter: Winkelstück vom Bogen zum Drehgelenk rechts neben dem Magneten (nur beim drehbaren Magneten).
+  // Es greift in der Mitte des Bogens an, wohin der Stab nie kommt, und liegt außerhalb der Bügel der Schaukel.
+  // Eigene Materialien, da der ganze Magnet beim Umdrehen überblendet wird.
+  const yokeMid = Z_IN - (inner + outer) / 2;
+  const holderArm = new THREE.Group();
+  group.add(holderArm);
   const holderMat = mat.holder.clone(), pointerMat = mat.cableRed.clone();
   const cross = addMesh(new THREE.BoxGeometry(armX - MAGNET.WIDTH / 2 + 0.4, 1.4, 1.4), holderMat, holderArm);
   cross.position.set((MAGNET.WIDTH / 2 + armX) / 2, 0, yokeMid);
@@ -146,7 +144,14 @@ magnet.add(holderArm);
   radial.position.set(armX, 0, yokeMid / 2);
   const pointer = addMesh(new THREE.BoxGeometry(0.12, 0.3, 4), pointerMat, holderArm);   // Zeiger der Winkelskala
   pointer.position.set(MAGNET.HOLDER_X + 1.12, 0, -2);
+
+  return { group, upperLeg, lowerLeg, upperLabels, lowerLabels, holderArm, targets: [yoke, upperLeg, lowerLeg] };
 }
+const bodies = { short: buildBody(MAGNET), long: buildBody(MAGNET_LONG) };
+const body = () => (state.longMagnet ? bodies.long : bodies.short);
+
+// Körper des sichtbaren Magneten, an denen man ihn (auf dem Tisch) greifen kann (wird in applySetup gefüllt)
+export const magnetTargets = [];
 
 // Drehgelenk mit Winkelskala (fest), auf eigener Stativstange – nur beim drehbaren Magneten
 const holderStand = new THREE.Group();
@@ -178,27 +183,31 @@ function angleScaleTexture() {
   texture.anisotropy = 8;
   return texture;
 }
+const holderTop = new THREE.Group();   // Gelenk, Skala und Muffe: wandern mit der Höhe der Drehachse
+holderStand.add(holderTop);
+let holderPole;
 {
-  const hub = rod(4.2, 1, mat.holder, holderStand);
+  const hub = rod(4.2, 1, mat.holder, holderTop);
   hub.rotation.z = Math.PI / 2;
   hub.position.set(MAGNET.HOLDER_X + 0.5, AXIS_Y, 0);
   const face = new THREE.Mesh(new THREE.CircleGeometry(4, 48), new THREE.MeshBasicMaterial({ map: angleScaleTexture() }));
   face.rotation.y = Math.PI / 2;
   face.position.set(MAGNET.HOLDER_X + 1.02, AXIS_Y, 0);
-  holderStand.add(face);
-  const axle = rod(0.35, 1.6, mat.clamp, holderStand);
+  holderTop.add(face);
+  const axle = rod(0.35, 1.6, mat.clamp, holderTop);
   axle.rotation.z = Math.PI / 2;
   axle.position.set(MAGNET.HOLDER_X + 1.2, AXIS_Y, 0);
   // Stativstange hinter dem Gelenk, damit die Skala frei bleibt
   const standX = MAGNET.HOLDER_X + 2.4;
-  const stub = rod(0.4, 1.8, mat.rod, holderStand);
+  const stub = rod(0.4, 1.8, mat.rod, holderTop);
   stub.rotation.z = Math.PI / 2;
   stub.position.set(MAGNET.HOLDER_X + 1.5, AXIS_Y, -4.6);
-  const link = addMesh(new THREE.BoxGeometry(0.8, 1.2, 4.6), mat.holder, holderStand);
+  const link = addMesh(new THREE.BoxGeometry(0.8, 1.2, 4.6), mat.holder, holderTop);
   link.position.set(MAGNET.HOLDER_X + 0.5, AXIS_Y, -2.3);
-  const pole = rod(0.6, AXIS_Y + 1, mat.rod, holderStand);
-  pole.position.set(standX, (AXIS_Y + 1) / 2 + 0.6, -4.6);
-  const sleeve = addMesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), mat.clamp, holderStand);
+  // Stange als Einheitslänge, wird in applySetup auf die Höhe der Drehachse gestreckt
+  holderPole = rod(0.6, 1, mat.rod, holderStand);
+  holderPole.position.set(standX, 0, -4.6);
+  const sleeve = addMesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), mat.clamp, holderTop);
   sleeve.position.set(standX, AXIS_Y, -4.6);
   const base = addMesh(new THREE.BoxGeometry(5, 1.2, 9), mat.standBase, holderStand);
   base.position.set(standX, 0.6, -6);
@@ -212,22 +221,32 @@ export function syncApparatus() {
   magnet.position.z = magnetMotion.z;
 }
 
-// Versuch einstellen: Höhe der Querstange und des Magneten, Halter ein- oder ausblenden
+// Versuch und Magnet einstellen: Höhe der Querstange und des Magneten, kurzer oder langer Magnet,
+// Halter ein- oder ausblenden
 export function applySetup() {
-  const axisY = SETUPS[state.setup].axisY;
+  const axisY = axisHeight(state.setup, state.longMagnet);
   rig.position.y = axisY - AXIS_Y;
   magnet.position.y = axisY;
+  holderTop.position.y = axisY - AXIS_Y;
+  holderPole.scale.y = axisY + 1;
+  holderPole.position.y = (axisY + 1) / 2 + 0.6;
+  bodies.short.group.visible = !state.longMagnet;
+  bodies.long.group.visible = state.longMagnet;
+  magnetTargets.splice(0, magnetTargets.length, ...body().targets);
   const rotatable = state.setup === 'drehbar';
-  holderArm.visible = holderStand.visible = rotatable;
+  for (const b of Object.values(bodies)) b.holderArm.visible = rotatable;
+  holderStand.visible = rotatable;
   syncApparatus();
 }
 
 // Farben und Beschriftungen passend zur Polung des Magneten
 export function applyMagnetPoles() {
-  upperLeg.material = state.northUp ? mat.north : mat.south;
-  lowerLeg.material = state.northUp ? mat.south : mat.north;
-  for (const label of upperLabels) label.material.map = textTexture(state.northUp ? 'N' : 'S');
-  for (const label of lowerLabels) label.material.map = textTexture(state.northUp ? 'S' : 'N');
+  for (const { upperLeg, lowerLeg, upperLabels, lowerLabels } of Object.values(bodies)) {
+    upperLeg.material = state.northUp ? mat.north : mat.south;
+    lowerLeg.material = state.northUp ? mat.south : mat.north;
+    for (const label of upperLabels) label.material.map = textTexture(state.northUp ? 'N' : 'S');
+    for (const label of lowerLabels) label.material.map = textTexture(state.northUp ? 'S' : 'N');
+  }
 }
 
 // Überblenden beim Umdrehen des Magneten

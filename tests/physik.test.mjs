@@ -154,3 +154,27 @@ test('Anhalten: Zeiger springt sofort auf 0', () => {
   stepPhysics(1 / 60);
   assert.equal(needle.pos, 0);
 });
+
+test('langer Magnet: Schaukel schwingt weit aus, ohne anzustoßen', () => {
+  for (const setup of ['drehbar', 'tisch']) {
+    Object.assign(state, { setup, longMagnet: true, angle: 0, magnetAngle: 0, meterMode: 'U', range: 3, brakeBoost: false });
+    resetPhysics();
+    swing.theta = rad(30);
+    let maxTheta = 0, minTheta = 0;
+    for (let i = 0; i < 1200; i++) {
+      stepPhysics(1 / 600);
+      maxTheta = Math.max(maxTheta, swing.theta);
+      minTheta = Math.min(minTheta, swing.theta);
+    }
+    // ungestörte Schwingung: nahezu dieselbe Amplitude auf beiden Seiten (nur Luftdämpfung)
+    assert.ok(minTheta < -rad(29), `${setup}: ${minTheta}`);
+    assert.ok(maxTheta < rad(30.2), `${setup}: ${maxTheta}`);
+  }
+  // kurzer Magnet zum Vergleich: stößt hinten an den Bogen
+  Object.assign(state, { setup: 'drehbar', longMagnet: false });
+  assert.ok(swingLimits(0)[0] > -rad(30));
+  // drehbar bis 90°: der Bogen des langen Magneten bleibt über dem Tisch (Achse 26 cm, Bogen bis 24 cm)
+  state.longMagnet = true;
+  assert.ok(swingLimits(90)[1] > 0);
+  state.longMagnet = false;
+});

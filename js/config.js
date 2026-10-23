@@ -5,8 +5,10 @@
 // Ursprung der Versuchsgeometrie: Lage der Stabmitte, wenn die Schaukel ruhig hängt (AXIS).
 // ------------------------------------------------------------------
 
-// Ruhelage der Stabmitte (beim drehbaren Magneten zugleich seine Drehachse)
+// Ruhelage der Stabmitte (beim drehbaren Magneten zugleich seine Drehachse). Der lange Magnet braucht eine
+// höhere Drehachse, damit sein Bogen beim Drehen nicht in den Tisch fährt.
 export const AXIS_Y = 18;
+export const AXIS_Y_LONG = 26;
 
 // Leiterschaukel: Kupferstab an zwei starren Messingbügeln, die an einer Querstange hängen
 export const SWING = {
@@ -20,7 +22,7 @@ export const SWING = {
 export const PIVOT_Y = AXIS_Y + SWING.LENGTH;   // Höhe der Querstange (drehbarer Magnet)
 
 // Stativ: zwei Stangen links und rechts, verbunden durch die Querstange
-export const STAND = { X: 19, R: 0.6, TOP: PIVOT_Y + 5 };
+export const STAND = { X: 19, R: 0.6, TOP: AXIS_Y_LONG + SWING.LENGTH + 5 };
 
 // Großer Hufeisenmagnet. Maße im Koordinatensystem des Magneten (Grundstellung α = 0°):
 // Er liegt auf der Seite, Schenkel entlang z, ein Pol über und einer unter dem Stab, der Bogen hinten.
@@ -31,30 +33,37 @@ export const MAGNET = {
   THICK: 3,                   // Dicke der Schenkel
   WIDTH: 6,                   // Breite der Pole (entlang des Stabs) = Länge des Stabs im Feld
   Z_IN: -6,                   // Schenkel beginnen am Bogen ...
-  Z_OPEN: 5,                  // ... und enden vorne offen
+  Z_OPEN: 5,                  // ... und enden vorne offen (kurzer Magnet)
   FRINGE: 2.5,                // Randfeld: Abfall auf 0 über 2,5 cm außerhalb des Polbereichs
   HOLDER_X: 11,               // Drehgelenk mit Winkelskala rechts neben dem Magneten
 };
+
+// Langer Hufeisenmagnet: Schenkel 32 cm, reichen 16 cm vor und hinter den Stab – die Schaukel kann weit
+// ausschwingen (bis ca. 37°, dann stößt der hochschwingende Stab an den oberen Schenkel).
+export const MAGNET_LONG = { Z_IN: -16, Z_OPEN: 16 };
+export const magnetLegs = long => (long ? MAGNET_LONG : MAGNET);
 
 // Die beiden Versuchsaufbauten. Beim Magneten auf dem Tisch liegt der Polspalt tiefer,
 // deshalb ist die Querstange am Stativ entsprechend tiefer eingespannt.
 export const SETUPS = {
   drehbar: {
     title: 'Drehbarer Magnet',
-    axisY: AXIS_Y,
     camPos: [22, 44, 112],
     camTarget: [28, 20, 0],
   },
   tisch: {
     title: 'Magnet auf dem Tisch',
-    axisY: MAGNET.THICK + MAGNET.GAP / 2,
     camPos: [22, 38, 112],
     camTarget: [28, 14, 0],
   },
 };
-// Magnet auf dem Tisch: Verschiebebereich (Lage des Polbereichs relativ zum Stab in cm) und Ziehgeschwindigkeit
-export const MAGNET_Z_MIN = -24;
-export const MAGNET_Z_MAX = 30;
+// Höhe der Stabachse (Ruhelage) je nach Versuch und Magnet
+export const axisHeight = (setup, long) =>
+  setup === 'tisch' ? MAGNET.THICK + MAGNET.GAP / 2 : long ? AXIS_Y_LONG : AXIS_Y;
+
+// Magnet auf dem Tisch: Verschiebebereich (Lage des Polbereichs relativ zum Stab in cm) und Ziehgeschwindigkeit.
+// Nach hinten höchstens so weit, dass der Bogen vor dem hinten verlegten Kabel (z = −44) bleibt.
+export const magnetZRange = long => [-38 - magnetLegs(long).Z_IN + MAGNET.GAP / 2 + MAGNET.THICK, 30];
 export const MAGNET_DRAG_MAX_SPEED = 1.5;      // in m/s
 
 // Physikalische Modellgrößen (SI)
@@ -70,6 +79,7 @@ export const MAGNET_TURN_SPEED = 45;           // Drehgeschwindigkeit des Magnet
 export const DRAG_TIME = 0.05;                 // Ziehen: Schaukel folgt dem Finger mit dieser Zeitkonstante (s)
 export const DRAG_MAX_OMEGA = 7;               // ... höchstens mit dieser Winkelgeschwindigkeit (rad/s)
 export const PUSH_ANGLE = 15;                  // „Auslenken und loslassen“: Startwinkel in Grad (nach vorne)
+export const PUSH_ANGLE_LONG = 25;             // ... beim langen Magneten
 
 // Zeigermessgerät: Zeiger als gedämpfter Schwinger (Eigenfrequenz, Dämpfungsgrad)
 export const METER = {

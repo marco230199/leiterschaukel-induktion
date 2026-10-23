@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { addMesh } from './hilfen.js';
 import { mat } from './materialien.js';
-import { SETUPS } from './config.js';
+import { SETUPS, axisHeight } from './config.js';
 import { state } from './state.js';
 
 const container = document.getElementById('scene');
@@ -31,9 +31,11 @@ controls.minDistance = 25;
 controls.maxDistance = 220;
 
 // Startansicht des jeweiligen Versuchs: schräg von vorne, Schaukel links, Messgerät rechts
+// (beim langen drehbaren Magneten liegt der Aufbau höher, die Ansicht wandert mit)
 export function resetView() {
-  camera.position.set(...SETUPS[state.setup].camPos);
-  controls.target.set(...SETUPS[state.setup].camTarget);
+  const lift = axisHeight(state.setup, state.longMagnet) - axisHeight(state.setup, false);
+  camera.position.set(...SETUPS[state.setup].camPos).add(new THREE.Vector3(0, lift, 0));
+  controls.target.set(...SETUPS[state.setup].camTarget).add(new THREE.Vector3(0, lift, 0));
 }
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7a66, 0.8));

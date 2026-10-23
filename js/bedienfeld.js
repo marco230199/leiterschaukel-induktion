@@ -46,6 +46,7 @@ function updateUi() {
     button.setAttribute('aria-pressed', String(active));
   }
   $('valueOut').hidden = !state.showValue;
+  $('longStatus').hidden = !state.longMagnet;
   updateMeterFace();
 }
 
@@ -73,16 +74,33 @@ export function animateFlip(dt) {
   }
 }
 
+// Laufendes Umdrehen des Magneten sofort abschließen
+function finishFlip() {
+  if (!flip.active) return;
+  if (!flip.swapped) state.northUp = !state.northUp;
+  flip.active = false;
+  applyMagnetPoles();
+  setMagnetOpacity(1);
+}
+
+// Kurzen oder langen Magneten einsetzen: Schaukel in Ruhe, Magnet in Grundlage; beim drehbaren Magneten
+// ändert sich die Höhe der Drehachse, deshalb Querstange, Kabel und Ansicht neu
+function setLongMagnet(long) {
+  cancelDrag();
+  finishFlip();
+  state.longMagnet = long;
+  resetPhysics();
+  applySetup();
+  buildCables();
+  if (state.setup === 'drehbar') resetView();
+  updateUi();
+}
+
 // Versuch wechseln: Magnet in Grundstellung, Schaukel in Ruhe, Querstange und Kabel neu, Startansicht
 function setSetup(setup) {
   if (setup === state.setup) return;
   cancelDrag();
-  if (flip.active) {   // laufendes Umdrehen sofort abschließen
-    if (!flip.swapped) state.northUp = !state.northUp;
-    flip.active = false;
-    applyMagnetPoles();
-    setMagnetOpacity(1);
-  }
+  finishFlip();
   state.setup = setup;
   state.angle = state.magnetAngle = 0;
   $('angleSlider').value = 0;
@@ -104,6 +122,7 @@ export function initUi() {
   $('slowCheck').checked = state.slowMotion;
   $('brakeCheck').checked = state.brakeBoost;
   $('valueCheck').checked = state.showValue;
+  $('longCheck').checked = state.longMagnet;
   $('angleSlider').value = state.angle;
 
   $('resetView').addEventListener('click', resetView);
@@ -124,6 +143,7 @@ export function initUi() {
     Object.assign(flip, { active: true, t: 0, swapped: false });
     updateUi();
   });
+  $('longCheck').addEventListener('change', e => setLongMagnet(e.target.checked));
   $('angleSlider').addEventListener('input', e => { state.angle = Number(e.target.value); updateUi(); });
   $('modeUBtn').addEventListener('click', () => { state.meterMode = 'U'; updateUi(); });
   $('modeIBtn').addEventListener('click', () => { state.meterMode = 'I'; updateUi(); });

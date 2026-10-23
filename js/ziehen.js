@@ -4,7 +4,7 @@
 // Greift man daneben, dreht sich wie gewohnt die Ansicht.
 // ------------------------------------------------------------------
 import * as THREE from 'three';
-import { SWING, SETUPS } from './config.js';
+import { SWING, axisHeight } from './config.js';
 import { state } from './state.js';
 import { startDrag, dragTo, endDrag, magnetMotion, startMagnetDrag, dragMagnetTo, endMagnetDrag } from './physik.js';
 import { grabTargets, magnetTargets } from './aufbau.js';
@@ -40,7 +40,7 @@ function pick() {
 function pointerOnPlane() {
   return raycaster.ray.intersectPlane(plane, hit);
 }
-const pivotY = () => SETUPS[state.setup].axisY + SWING.LENGTH;
+const pivotY = () => axisHeight(state.setup, state.longMagnet) + SWING.LENGTH;
 const swingAngle = p => Math.atan2(p.z, pivotY() - p.y);
 
 // Erfassungsphase: läuft vor den OrbitControls, die dann für diesen Zug abgeschaltet werden
