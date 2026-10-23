@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Induktion – Leiterschaukel</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="scene"></div>
+
+  <div class="header">
+    <h1>Induktion: Leiterschaukel im Magnetfeld</h1>
+    <p>Bewegt sich der Leiter im Magnetfeld, zeigt das Messgerät eine Spannung an.</p>
+  </div>
+
+  <div class="hint">
+    <span>Schaukel ziehen: bewegen · daneben ziehen: Ansicht drehen · Mausrad/zwei Finger: zoomen</span>
+    <button id="resetView" type="button">Ansicht zurücksetzen</button>
+  </div>
+
+  <aside class="panel">
+    <section>
+      <h2>Leiterschaukel</h2>
+      <p class="status">Fasse den Kupferstab oder einen Bügel an und bewege die Schaukel. Lässt du los,
+        schwingt sie weiter.</p>
+      <div class="button-row">
+        <button id="pushBtn" type="button">Auslenken und loslassen</button>
+        <button id="stopBtn" type="button">Anhalten</button>
+      </div>
+      <label class="check"><input id="slowCheck" type="checkbox" /> Zeitlupe</label>
+    </section>
+    <section>
+      <h2>Hufeisenmagnet</h2>
+      <button id="flipBtn" type="button">Magnet umdrehen (N ↔ S)</button>
+      <p class="status" id="magnetStatus"></p>
+      <label class="slider">
+        <span class="row">Drehwinkel des Magneten α <output id="angleOut">0°</output></span>
+        <input id="angleSlider" type="range" min="0" max="90" step="5" value="0" />
+      </label>
+      <p class="status">0°: Feld senkrecht zur Bewegung der Schaukel · 90°: Feld parallel zur Bewegung</p>
+    </section>
+    <section>
+      <h2>Messgerät</h2>
+      <div class="segmented" role="group" aria-label="Messgröße">
+        <button id="modeUBtn" type="button">Spannung U</button>
+        <button id="modeIBtn" type="button">Stromstärke I</button>
+      </div>
+      <p class="status" id="modeStatus"></p>
+      <div id="brakeBox">
+        <label class="check"><input id="brakeCheck" type="checkbox" /> Bremswirkung 1000-fach verstärken</label>
+        <p class="status">Gedankenexperiment: Nur die Kraft auf den Stab wird verstärkt, damit man die Bremsung sieht.</p>
+      </div>
+      <p class="status" style="margin-top:12px">Messbereich</p>
+      <div class="segmented" role="group" aria-label="Messbereich" id="rangeButtons"></div>
+      <label class="check"><input id="valueCheck" type="checkbox" /> Messwert als Zahl</label>
+      <p class="value" id="valueOut" hidden></p>
+    </section>
+  </aside>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
