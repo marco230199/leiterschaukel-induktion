@@ -37,6 +37,25 @@ Zwei Versuche, per Knopf umschaltbar:
   bremst die Schaukel. Bei einem echten Aufbau ist das kaum zu merken; per Gedankenexperiment lässt sich
   die Bremskraft 1000-fach verstärken.
 
+## LED statt Messgerät (Gedankenexperiment)
+
+Unter „Anzeige“ lässt sich statt des Zeigermessgeräts eine LED auf einer Steckplatte anschließen
+(rote Buchse = Anode, am rechten Stabende; schwarze Buchse = Kathode). In der Simulation steht dazu bewusst
+kein Erklärtext – die Einordnung gehört in den Unterricht:
+
+- **In Wirklichkeit leuchtet hier keine LED.** Die Leiterschaukel liefert nur U = B · l · v ≈ 0,1 T · 0,06 m
+  · 0,3 m/s ≈ 2 mV (kräftig gezogen höchstens einige mV). Eine LED braucht etwa 1,8 V (rot) bis 3 V
+  (weiß/blau), ein Glühlämpchen mindestens rund 1 V und einige 10 mA – es fehlt ein Faktor 300 bis 1000.
+- **Im Gedankenexperiment** ist die Schwellspannung der LED auf 1 mV herabgesetzt (statt etwa 1,8 V). Darüber
+  wird sie mit wachsender Spannung heller, ab 3 mV leuchtet sie voll. Die LED wirkt nicht auf die Schaukel
+  zurück (keine Bremsung).
+- Wie eine echte LED leuchtet sie **nur in Durchlassrichtung**, also nur, wenn das rechte Stabende Pluspol ist.
+  Beim Pendeln blitzt sie deshalb nur bei jeder zweiten Halbschwingung auf; nach „Magnet umdrehen“ in der
+  jeweils anderen.
+- **Wie es wirklich geht:** Mit einer Spule aus vielen Windungen addieren sich die Spannungen der einzelnen
+  Leiterstücke. Mit einigen hundert bis tausend Windungen und schneller Bewegung erreicht man Volt –
+  so arbeiten Fahrraddynamo und Generator.
+
 ## Erklärung: Elektron im Leiter
 
 Der Knopf „Erklärung: Elektron im Leiter“ blendet alles Störende aus (Stative, Querstange, Halter, Messgerät,
@@ -90,6 +109,7 @@ leiterschaukel-induktion/
 │   ├── szene.js        # Renderer, Kamera, Licht, Tisch
 │   ├── aufbau.js       # Stativ, Leiterschaukel, Hufeisenmagnet mit Drehgelenk
 │   ├── messgeraet.js   # Zeigermessgerät und Kabel
+│   ├── led.js          # LED statt Messgerät (Gedankenexperiment)
 │   ├── erklaerung.js   # Erklärmodus: Elektron, Pfeile v/B/F_L, Hand zur Drei-Finger-Regel
 │   ├── ziehen.js       # Schaukel bzw. Magnet (auf dem Tisch) mit Maus/Finger ziehen
 │   ├── bedienfeld.js   # Knöpfe, Regler, Anzeigen

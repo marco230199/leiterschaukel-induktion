@@ -9,6 +9,7 @@ import { addMesh, makeLabel, formatNumber } from './hilfen.js';
 import { mat } from './materialien.js';
 import { scene } from './szene.js';
 import { socketPoint } from './aufbau.js';
+import { ledSocket, setLedVisible } from './led.js';
 
 // Das Messgerät steht auf dem Tisch und lässt sich um die senkrechte Achse drehen (Ziehen oder Knopf)
 const meter = new THREE.Group();
@@ -225,14 +226,23 @@ export function buildCables() {
   const right = socketPoint(1), left = socketPoint(-1);
   const route = ROUTES[state.setup](right.y - 2.2);
   cables = [
-    makeCable([...from(right), ...route.red, ...intoSocket(SOCKET_PLUS)], mat.cableRed),
-    makeCable([...from(left), ...route.black, ...intoSocket(SOCKET_COM)], mat.cableBlack),
+    makeCable([...from(right), ...route.red, ...(state.display === 'led' ? intoLed(1) : intoSocket(SOCKET_PLUS))], mat.cableRed),
+    makeCable([...from(left), ...route.black, ...(state.display === 'led' ? intoLed(-1) : intoSocket(SOCKET_COM))], mat.cableBlack),
   ];
 }
 
-// Messgerät im Erklärmodus ausblenden (die Kabel lässt buildCables dann weg)
-export function setMeterVisible(visible) {
-  meter.visible = visible;
+// Letztes Stück zur LED-Platte: über den Tisch heran und von oben in die Buchse
+// (rot, side +1: von vorne; schwarz, side −1: von hinten)
+function intoLed(side) {
+  const socket = ledSocket(side);
+  const dz = side > 0 ? 1 : -1;
+  return [[socket.x - 2, 0.4, socket.z + dz * 6], [socket.x, socket.y + 3, socket.z + dz * 1.5], socket.toArray()];
+}
+
+// Messgerät oder LED zeigen; im Erklärmodus keins von beiden (die Kabel lässt buildCables dann weg)
+export function applyDisplay() {
+  meter.visible = !state.explain && state.display === 'meter';
+  setLedVisible(!state.explain && state.display === 'led');
 }
 
 // ---------------- Messgerät drehen

@@ -29,5 +29,6 @@ export const mat = {
   // unbeleuchtet, damit sie im durchsichtigen Stab kräftig und gut unterscheidbar bleiben
   electronPlain: new THREE.MeshBasicMaterial({ color: 0x2196f3 }),
   ion: new THREE.MeshBasicMaterial({ color: 0xe53935 }),
+  wood: new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 }),
   cableBlack: new THREE.MeshStandardMaterial({ color: 0x26292d, roughness: 0.5 }),
 };

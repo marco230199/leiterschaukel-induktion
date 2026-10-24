@@ -103,7 +103,13 @@
       </div>
     </section>
     <section id="meterSection">
-      <h2>Messgerät</h2>
+      <h2>Anzeige</h2>
+      <div class="segmented" role="group" aria-label="Anzeige">
+        <button id="displayMeterBtn" type="button">Messgerät</button>
+        <button id="displayLedBtn" type="button">LED</button>
+      </div>
+      <div id="meterControls">
+      <p class="status" style="margin-top:12px">Messgröße</p>
       <div class="segmented" role="group" aria-label="Messgröße">
         <button id="modeUBtn" type="button">Spannung U</button>
         <button id="modeIBtn" type="button">Stromstärke I</button>
@@ -119,6 +125,7 @@
       <p class="value" id="valueOut" hidden></p>
       <button id="meterTurnBtn" type="button">Messgerät zu mir drehen</button>
       <p class="status">Du kannst das Messgerät auch anfassen und durch seitliches Ziehen drehen.</p>
+      </div>
     </section>
   </aside>
 

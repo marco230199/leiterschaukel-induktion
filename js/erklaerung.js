@@ -225,11 +225,11 @@ export function syncExplain(dt) {
   const justOn = on && !wasOn;
   wasOn = on;
   electronMesh.visible = on;
+  manyGroup.visible = on && state.manyElectrons;
   if (!on) for (const arrow of Object.values(arrows)) arrow.group.visible = false;
   hand.visible = on && state.showExplainHand;
   if (!on) return;
 
-  manyGroup.visible = state.manyElectrons;
   if (state.manyElectrons) {
     const p = electronPositions(), hi = highlightedElectron();
     electronMesh.position.set(p[hi], -SWING.LENGTH - MANY_Y, 0);

@@ -97,6 +97,11 @@ export const EXPLAIN = {
   ARROW_MAX: 12,
 };
 
+// LED statt Messgerät (Gedankenexperiment, siehe README): Schwellspannung 1 mV statt real etwa 1,8 V.
+// Darüber wird sie heller und leuchtet bei THRESHOLD + FULL voll; sie leuchtet nur in Durchlassrichtung
+// (Anode an der roten Buchse = rechtes Stabende).
+export const LED = { THRESHOLD: 1e-3, FULL: 2e-3, POS: [31, 0, 10] };
+
 // Zeigermessgerät: Zeiger als gedämpfter Schwinger (Eigenfrequenz, Dämpfungsgrad)
 export const METER = {
   FREQ: 1.2,                  // in Hz

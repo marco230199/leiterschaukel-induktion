@@ -5,7 +5,7 @@ import { METER, SWING } from './config.js';
 import { state } from './state.js';
 import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron, setHold, holdTo, swing } from './physik.js';
 import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus } from './aufbau.js';
-import { updateMeterFace, buildCables, turnMeterTowards, setMeterVisible } from './messgeraet.js';
+import { updateMeterFace, buildCables, turnMeterTowards, applyDisplay } from './messgeraet.js';
 import { explainView } from './erklaerung.js';
 import { cancelDrag } from './ziehen.js';
 import { resetView as resetSetupView, camera, controls, table } from './szene.js';
@@ -38,6 +38,11 @@ function updateUi() {
   $('manyLegend').hidden = $('manyInfo').hidden = !state.manyElectrons;
   for (const [id, key] of EXPLAIN_TOGGLES) $(id).setAttribute('aria-pressed', String(state[key]));
   $('meterSection').hidden = state.explain;
+  for (const [id, display] of [['displayMeterBtn', 'meter'], ['displayLedBtn', 'led']]) {
+    $(id).classList.toggle('active', state.display === display);
+    $(id).setAttribute('aria-pressed', String(state.display === display));
+  }
+  $('meterControls').hidden = state.display !== 'meter';
   $('slowCheck').checked = state.slowMotion;
   for (const [id, setup] of [['setupDrehbarBtn', 'drehbar'], ['setupTischBtn', 'tisch']]) {
     $(id).classList.toggle('active', state.setup === setup);
@@ -124,7 +129,7 @@ function setExplain(on) {
   if (on) state.slowMotion = true;
   stopSwing();
   resetElectron();
-  setMeterVisible(!on);
+  applyDisplay();
   table.visible = !on;
   applySetup();
   buildCables();
@@ -221,6 +226,16 @@ export function initUi() {
     updateUi();
   });
   $('angleSlider').addEventListener('input', e => { state.angle = Number(e.target.value); updateUi(); });
+  for (const [id, display] of [['displayMeterBtn', 'meter'], ['displayLedBtn', 'led']]) {
+    $(id).addEventListener('click', () => {
+      if (state.display === display) return;
+      cancelDrag();
+      state.display = display;
+      applyDisplay();
+      buildCables();
+      updateUi();
+    });
+  }
   $('modeUBtn').addEventListener('click', () => { state.meterMode = 'U'; updateUi(); });
   $('modeIBtn').addEventListener('click', () => { state.meterMode = 'I'; updateUi(); });
   $('brakeCheck').addEventListener('change', e => { state.brakeBoost = e.target.checked; });
@@ -228,6 +243,7 @@ export function initUi() {
 
   applyMagnetPoles();
   applySetup();
+  applyDisplay();
   buildCables();
   updateUi();
 }

@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------
 import {
   SWING, MAGNET, B_FIELD, L_FIELD, G, PENDULUM_L, SWING_MASS, AIR_DAMPING, CIRCUIT_R, BRAKE_BOOST,
-  EXPLAIN, MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, PUSH_ANGLE_LONG, METER, MAGNET_DRAG_MAX_SPEED, magnetLegs, magnetZRange,
+  EXPLAIN, LED, MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, PUSH_ANGLE_LONG, METER, MAGNET_DRAG_MAX_SPEED, magnetLegs, magnetZRange,
 } from './config.js';
 import { state } from './state.js';
 
@@ -121,8 +121,12 @@ export function electronForce() {
   };
 }
 
-// Stromstärke in A (in x-Richtung durch den Stab); bei Spannungsmessung fließt praktisch kein Strom
-export const inducedCurrent = () => (state.meterMode === 'I' ? emf() / CIRCUIT_R : 0);
+// Stromstärke in A (in x-Richtung durch den Stab); nur bei Strommessung mit dem Messgerät
+// (bei Spannungsmessung fließt praktisch kein Strom, die LED-Anzeige ist ein Gedankenexperiment ohne Rückwirkung)
+export const inducedCurrent = () => (state.display === 'meter' && state.meterMode === 'I' ? emf() / CIRCUIT_R : 0);
+
+// Helligkeit der LED (0 … 1): erst oberhalb der Schwellspannung, nur in Durchlassrichtung (U > 0)
+export const ledBrightness = () => clamp((emf() - LED.THRESHOLD) / LED.FULL, 0, 1);
 
 // Anzeige des Messgeräts in mV bzw. mA
 export const meterReading = () => 1000 * (state.meterMode === 'I' ? inducedCurrent() : emf());

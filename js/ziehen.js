@@ -28,7 +28,7 @@ function setRay(event) {
 
 // Was liegt unter dem Finger? Der Magnet lässt sich nur auf dem Tisch verschieben.
 function pick() {
-  const targets = [...grabTargets, ...(state.explain ? [] : meterTargets), ...(state.setup === 'tisch' ? magnetTargets : [])];
+  const targets = [...grabTargets, ...(state.explain || state.display !== 'meter' ? [] : meterTargets), ...(state.setup === 'tisch' ? magnetTargets : [])];
   const first = raycaster.intersectObjects(targets, false)[0];
   if (!first) return null;
   const kind = magnetTargets.includes(first.object) ? 'magnet' : meterTargets.includes(first.object) ? 'meter' : 'swing';

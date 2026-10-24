@@ -263,3 +263,25 @@ test('Viele Elektronen: drängen sich am einen Ende (Überschuss), am anderen bl
   state.longMagnet = false;
   state.explain = false;
 });
+
+test('LED (Gedankenexperiment): leuchtet nur in Durchlassrichtung und oberhalb der Schwelle', async () => {
+  const { ledBrightness } = await import('../js/physik.js');
+  Object.assign(state, { setup: 'drehbar', longMagnet: false, northUp: true, angle: 0, magnetAngle: 0, explain: false, display: 'led', meterMode: 'I', brakeBoost: true });
+  resetPhysics();
+  assert.equal(ledBrightness(), 0, 'in Ruhe dunkel');
+  swing.theta = rad(15);
+  let lit = 0, dark = 0, maxB = 0;
+  for (let i = 0; i < 1200; i++) {
+    stepPhysics(1 / 600);
+    const b = ledBrightness();
+    maxB = Math.max(maxB, b);
+    if (b > 0) { lit++; assert.ok(emf() > 1e-3, 'nur oberhalb der Schwelle, nur bei U > 0'); }
+    else if (emf() < -1e-3) dark++;
+  }
+  assert.ok(lit > 0 && dark > 0, 'leuchtet in einer Richtung, in der anderen nicht');
+  assert.ok(maxB > 0.3, `deutlich hell: ${maxB}`);
+  // keine Bremswirkung im LED-Modus, auch wenn vorher Strommessung mit Verstärkung gewählt war
+  const { inducedCurrent } = await import('../js/physik.js');
+  assert.equal(inducedCurrent(), 0);
+  Object.assign(state, { display: 'meter', meterMode: 'U', brakeBoost: false });
+});
