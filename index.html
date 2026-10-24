@@ -17,6 +17,17 @@
   <div class="hint">
     <span>Schaukel oder Magnet ziehen: bewegen · Messgerät ziehen: drehen · daneben ziehen: Ansicht drehen · Mausrad/zwei Finger: zoomen</span>
     <button id="resetView" type="button">Ansicht zurücksetzen</button>
+    <button id="linkBtn" type="button">Link zeigen</button>
+  </div>
+
+  <!-- QR-Code und Adresse der Simulation (Knopf „Link zeigen“) -->
+  <div class="link-overlay" id="linkOverlay" hidden>
+    <div class="link-box" role="dialog" aria-modal="true" aria-label="Link zur Simulation">
+      <div class="link-qr" id="linkQr"></div>
+      <a class="link-text" id="linkText" target="_blank" rel="noopener"></a>
+      <p class="status" id="linkLocal" hidden>Die Seite ist lokal geöffnet – gezeigt wird die öffentliche Adresse.</p>
+      <button id="linkClose" type="button">Schließen</button>
+    </div>
   </div>
 
   <!-- Bedienfeld des Erklärmodus: erscheint nur dort, links über der Szene -->

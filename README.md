@@ -95,6 +95,15 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
   Die Kraft auf das Elektron zeigt entgegengesetzt zum Mittelfinger.
 - Beim Magneten auf dem Tisch zählt die Bewegung des Leiters relativ zum Magneten (Schulmodell).
 
+## Link zeigen
+
+Der Knopf „Link zeigen“ (unten links) öffnet ein großes Fenster mit QR-Code und Adresse der Simulation zum
+Abscannen vom Beamer. Der Code wird im Browser aus der eigenen Adresse erzeugt; bei lokal geöffneter Seite
+(localhost) zeigt er die öffentliche Adresse <https://marco230199.github.io/leiterschaukel-induktion/>
+(`PUBLIC_URL` in `js/config.js`). Die QR-Code-Bibliothek
+[qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT) wird beim ersten Öffnen aus dem
+Internet geladen.
+
 ## Starten
 
 Die Simulation lädt [three.js](https://threejs.org) aus dem Internet und muss über einen Webserver
@@ -119,6 +128,7 @@ leiterschaukel-induktion/
 │   ├── messgeraet.js   # Zeigermessgerät und Kabel
 │   ├── led.js          # LED statt Messgerät (Gedankenexperiment)
 │   ├── erklaerung.js   # Erklärmodus: Elektron, Pfeile v/B/F_L, Hand zur Drei-Finger-Regel
+│   ├── link.js         # „Link zeigen“: QR-Code und Adresse
 │   ├── ziehen.js       # Schaukel bzw. Magnet (auf dem Tisch) mit Maus/Finger ziehen
 │   ├── bedienfeld.js   # Knöpfe, Regler, Anzeigen
 │   ├── hilfen.js       # Hilfsfunktionen

@@ -101,6 +101,9 @@ export const EXPLAIN = {
 // (Anode an der roten Buchse = rechtes Stabende).
 export const LED = { THRESHOLD: 1e-3, FULL: 2e-3, POS: [31, 0, 10] };
 
+// Öffentliche Adresse (GitHub Pages): für den QR-Code, wenn die Seite lokal geöffnet ist
+export const PUBLIC_URL = 'https://marco230199.github.io/leiterschaukel-induktion/';
+
 // Zeigermessgerät: Zeiger als gedämpfter Schwinger (Eigenfrequenz, Dämpfungsgrad)
 export const METER = {
   FREQ: 1.2,                  // in Hz

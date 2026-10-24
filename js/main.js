@@ -11,8 +11,10 @@ import { syncLed } from './led.js';
 import { initUi, animateFlip, updateValue, updateHoldSlider } from './bedienfeld.js';
 import { syncExplain } from './erklaerung.js';
 import './ziehen.js';
+import { initLink } from './link.js';
 
 initUi();
+initLink();
 resetView();
 
 const SLOW_MOTION = 0.25;
