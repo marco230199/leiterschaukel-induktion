@@ -33,6 +33,9 @@ Zwei Versuche, per Knopf umschaltbar:
   „Anhalten“ setzt den Zeiger sofort auf 0. Das Messgerät lässt sich anfassen und durch seitliches Ziehen
   um die senkrechte Achse drehen; „Messgerät zu mir drehen“ richtet die Skala zur aktuellen Ansicht aus.
   Die Kabel laufen dabei um das Gerät herum mit.
+- **Kabel vertauschen** (Messgerät und LED): Das rote Kabel vom rechten Stabende steckt dann in der
+  Minus-Buchse bzw. an der Kathode, das schwarze in der Plus-Buchse bzw. an der Anode. Der Zeiger schlägt
+  andersherum aus, die LED leuchtet bei der jeweils anderen Halbschwingung.
 - **Strommessung und Lenz'sche Regel:** Bei Strommessung ist der Kreis geschlossen, der Induktionsstrom
   bremst die Schaukel. Bei einem echten Aufbau ist das kaum zu merken; per Gedankenexperiment lässt sich
   die Bremskraft 1000-fach verstärken.
@@ -79,6 +82,7 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
   Beschriftungen an den Stabenden erscheinen, sobald sich die Elektronen merklich verschoben haben.
 - **Elektron:** beobachtetes Elektron ein-/ausblenden (zu Beginn an). Bei „Viele Elektronen“ bleibt es in der
   Reihe, nur seine Hervorhebung (weißer Rand) verschwindet.
+- **Magnet umdrehen (N ↔ S)** – derselbe Knopf wie in der rechten Leiste
 - **Elektronen zurücksetzen**
 
 - Pfeile am Elektron: Geschwindigkeit v des Leiters (grün) und Lorentzkraft F_L auf das Elektron (rot);

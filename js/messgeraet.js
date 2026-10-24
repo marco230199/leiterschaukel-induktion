@@ -226,16 +226,20 @@ export function buildCables() {
   const right = socketPoint(1), left = socketPoint(-1);
   const route = ROUTES[state.setup](right.y - 2.2);
   cables = [
-    makeCable([...from(right), ...route.red, ...(state.display === 'led' ? intoLed(1) : intoSocket(SOCKET_PLUS))], mat.cableRed),
-    makeCable([...from(left), ...route.black, ...(state.display === 'led' ? intoLed(-1) : intoSocket(SOCKET_COM))], mat.cableBlack),
+    makeCable([...from(right), ...route.red, ...toDevice(state.cablesSwapped ? -1 : 1, true)], mat.cableRed),
+    makeCable([...from(left), ...route.black, ...toDevice(state.cablesSwapped ? 1 : -1, false)], mat.cableBlack),
   ];
 }
 
-// Letztes Stück zur LED-Platte: über den Tisch heran und von oben in die Buchse
-// (rot, side +1: von vorne; schwarz, side −1: von hinten)
-function intoLed(side) {
+// Ende eines Kabels am Messgerät bzw. an der LED: Plus-Buchse/Anode (+1) oder Minus-Buchse/Kathode (−1);
+// fromFront: das Kabel kommt von vorne (rot) bzw. von hinten (schwarz) an die LED-Platte
+const toDevice = (pole, fromFront) =>
+  (state.display === 'led' ? intoLed(pole, fromFront) : intoSocket(pole > 0 ? SOCKET_PLUS : SOCKET_COM));
+
+// Letztes Stück zur LED-Platte: über den Tisch heran (von vorne bzw. hinten) und von oben in die Buchse
+function intoLed(side, fromFront) {
   const socket = ledSocket(side);
-  const dz = side > 0 ? 1 : -1;
+  const dz = fromFront ? 1 : -1;
   return [[socket.x - 2, 0.4, socket.z + dz * 6], [socket.x, socket.y + 3, socket.z + dz * 1.5], socket.toArray()];
 }
 

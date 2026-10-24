@@ -125,11 +125,15 @@ export function electronForce() {
 // (bei Spannungsmessung fließt praktisch kein Strom, die LED-Anzeige ist ein Gedankenexperiment ohne Rückwirkung)
 export const inducedCurrent = () => (state.display === 'meter' && state.meterMode === 'I' ? emf() / CIRCUIT_R : 0);
 
-// Helligkeit der LED (0 … 1): erst oberhalb der Schwellspannung, nur in Durchlassrichtung (U > 0)
-export const ledBrightness = () => clamp((emf() - LED.THRESHOLD) / LED.FULL, 0, 1);
+// Vorzeichen am Messgerät bzw. an der LED: +1, wenn das rote Kabel (rechtes Stabende) in der Plus-Buchse
+// bzw. an der Anode steckt, −1 bei vertauschten Kabeln
+const cableSign = () => (state.cablesSwapped ? -1 : 1);
+
+// Helligkeit der LED (0 … 1): erst oberhalb der Schwellspannung, nur in Durchlassrichtung (Anode positiv)
+export const ledBrightness = () => clamp((cableSign() * emf() - LED.THRESHOLD) / LED.FULL, 0, 1);
 
 // Anzeige des Messgeräts in mV bzw. mA
-export const meterReading = () => 1000 * (state.meterMode === 'I' ? inducedCurrent() : emf());
+export const meterReading = () => 1000 * cableSign() * (state.meterMode === 'I' ? inducedCurrent() : emf());
 
 // Kraft auf den stromdurchflossenen Stab, Anteil entlang der Bahn in N: F = I · l · (x̂ × B)
 // (immer gegen die Bewegung gerichtet – Lenz'sche Regel)

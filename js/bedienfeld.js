@@ -54,7 +54,10 @@ function updateUi() {
   $('magnetStatus').textContent = (state.northUp
     ? 'Nordpol (rot) oben, Südpol (grün) unten'
     : 'Südpol (grün) oben, Nordpol (rot) unten') + (rotatable ? ' – bei α = 0°' : '');
-  $('flipBtn').disabled = flip.active;
+  $('flipBtn').disabled = $('explainFlipBtn').disabled = flip.active;
+  const device = state.display === 'led' ? ['Anode (+)', 'Kathode (−)'] : ['Plus-Buchse', 'Minus-Buchse'];
+  const [redTo, blackTo] = state.cablesSwapped ? [device[1], device[0]] : device;
+  $('cableStatus').textContent = `Rotes Kabel (rechtes Stabende) an ${redTo}, schwarzes an ${blackTo}`;
   $('angleOut').textContent = state.angle + '°';
   for (const [id, mode] of [['modeUBtn', 'U'], ['modeIBtn', 'I']]) {
     $(id).classList.toggle('active', state.meterMode === mode);
@@ -199,9 +202,16 @@ export function initUi() {
   $('stopBtn').addEventListener('click', stopSwing);
   $('meterTurnBtn').addEventListener('click', () => turnMeterTowards(camera.position));
   $('slowCheck').addEventListener('change', e => { state.slowMotion = e.target.checked; updateUi(); });
-  $('flipBtn').addEventListener('click', () => {
+  const startFlip = () => {
     if (flip.active) return;
     Object.assign(flip, { active: true, t: 0, swapped: false });
+    updateUi();
+  };
+  $('flipBtn').addEventListener('click', startFlip);
+  $('explainFlipBtn').addEventListener('click', startFlip);
+  $('swapCablesBtn').addEventListener('click', () => {
+    state.cablesSwapped = !state.cablesSwapped;
+    buildCables();
     updateUi();
   });
   $('longCheck').addEventListener('change', e => setLongMagnet(e.target.checked));

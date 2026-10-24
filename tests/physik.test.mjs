@@ -285,3 +285,19 @@ test('LED (Gedankenexperiment): leuchtet nur in Durchlassrichtung und oberhalb d
   assert.equal(inducedCurrent(), 0);
   Object.assign(state, { display: 'meter', meterMode: 'U', brakeBoost: false });
 });
+
+test('Kabel vertauschen: Zeiger und LED reagieren umgekehrt', async () => {
+  const { ledBrightness } = await import('../js/physik.js');
+  Object.assign(state, { setup: 'drehbar', longMagnet: false, northUp: true, angle: 0, magnetAngle: 0, explain: false, meterMode: 'U', display: 'meter', cablesSwapped: false });
+  resetPhysics();
+  // Stab nach vorne: rechtes Stabende ist Pluspol
+  swing.theta = 0; swing.omega = 1.5;
+  const normal = meterReading();
+  state.cablesSwapped = true;
+  assert.ok(normal > 0 && Math.abs(meterReading() + normal) < 1e-12, 'Zeiger andersherum');
+  assert.equal(ledBrightness(), 0, 'LED in Sperrrichtung');
+  swing.omega = -1.5;
+  assert.ok(ledBrightness() > 0, 'LED leuchtet bei der anderen Halbschwingung');
+  state.cablesSwapped = false;
+  assert.equal(ledBrightness(), 0);
+});
