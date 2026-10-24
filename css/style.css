@@ -19,7 +19,7 @@ html, body {
   background: rgba(255, 255, 255, 0.88);
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-  max-width: calc(100% - 32px);
+  max-width: calc(100% - 340px);   /* endet vor dem Bedienfeld rechts */
 }
 .header h1 { margin: 0; font-size: 1.25rem; }
 .header p { margin: 4px 0 0; font-size: 0.9rem; color: #4a5866; }
@@ -37,7 +37,7 @@ html, body {
   border-radius: 10px;
   font-size: 0.85rem;
   color: #4a5866;
-  max-width: calc(100% - 32px);
+  max-width: calc(100% - 340px);   /* endet vor dem Bedienfeld rechts (280 px + Ränder) */
 }
 .hint button {
   font: inherit;
@@ -109,6 +109,7 @@ html, body {
     max-height: 45%;
   }
   .hint { display: none; }
+  .header { max-width: calc(100% - 32px); }
   #scene { bottom: 45%; }
 }
 .button-row { display: flex; gap: 6px; }
@@ -206,3 +207,7 @@ html, body {
   cursor: pointer;
 }
 .link-box button:hover { background: #f0f4f8; }
+/* Knopf „Link / QR-Code zeigen“ ganz oben im Bedienfeld – auf jedem Gerät erreichbar */
+.panel button.link-btn { margin: 0 0 12px; border-color: #1d4f91; color: #1d4f91; font-weight: 600; }
+/* Umschalter mit drei Knöpfen (z. B. Messgerät | LED | Glühlampe) passen ins Bedienfeld */
+.panel .segmented button { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }

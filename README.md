@@ -112,7 +112,7 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
 
 ## Link zeigen
 
-Der Knopf „Link zeigen“ (unten links) öffnet ein großes Fenster mit QR-Code und Adresse der Simulation zum
+Der Knopf „Link / QR-Code zeigen“ (ganz oben im Bedienfeld rechts) öffnet ein großes Fenster mit QR-Code und Adresse der Simulation zum
 Abscannen vom Beamer. Der Code wird im Browser aus der eigenen Adresse erzeugt; bei lokal geöffneter Seite
 (localhost) zeigt er die öffentliche Adresse <https://marco230199.github.io/leiterschaukel-induktion/>
 (`PUBLIC_URL` in `js/config.js`). Die QR-Code-Bibliothek
