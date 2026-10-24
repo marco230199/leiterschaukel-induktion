@@ -77,6 +77,8 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
   Die Lorentzkraft schiebt alle Elektronen zum selben Ende; sie drängen sich dort zusammen
   (Elektronenüberschuss, Minuspol), am anderen Ende bleiben nur die Atomrümpfe (Elektronenmangel, Pluspol).
   Beschriftungen an den Stabenden erscheinen, sobald sich die Elektronen merklich verschoben haben.
+- **Elektron:** beobachtetes Elektron ein-/ausblenden (zu Beginn an). Bei „Viele Elektronen“ bleibt es in der
+  Reihe, nur seine Hervorhebung (weißer Rand) verschwindet.
 - **Elektronen zurücksetzen**
 
 - Pfeile am Elektron: Geschwindigkeit v des Leiters (grün) und Lorentzkraft F_L auf das Elektron (rot);

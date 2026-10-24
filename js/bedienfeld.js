@@ -13,7 +13,7 @@ import { formatNumber } from './hilfen.js';
 
 const $ = id => document.getElementById(id);
 const EXPLAIN_TOGGLES = [['explainSlowBtn', 'slowMotion'], ['pauseBtn', 'paused'], ['holdBtn', 'hold'],
-  ['showVBtn', 'showV'], ['showBBtn', 'showB'], ['showFBtn', 'showF'], ['showHandBtn', 'showExplainHand']];
+  ['showElectronBtn', 'showElectron'], ['showVBtn', 'showV'], ['showBBtn', 'showB'], ['showFBtn', 'showF'], ['showHandBtn', 'showExplainHand']];
 
 // Startansicht: im Erklärmodus nah am Stab, sonst die Ansicht des Versuchs
 const resetView = () => (state.explain ? explainView(controls) : resetSetupView());
@@ -126,7 +126,8 @@ function setExplain(on) {
   cancelDrag();
   state.explain = on;
   state.paused = false;
-  if (on) Object.assign(state, { showV: false, showB: false, showF: false, showExplainHand: false });   // zu Beginn aus
+  // zu Beginn: Elektron an, Pfeile, Feldlinien und Hand aus
+  if (on) Object.assign(state, { showElectron: true, showV: false, showB: false, showF: false, showExplainHand: false });
   setHold(false);
   if (on) state.slowMotion = true;
   stopSwing();

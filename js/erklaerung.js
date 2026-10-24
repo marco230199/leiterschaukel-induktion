@@ -247,7 +247,9 @@ export function syncExplain(dt) {
   const on = state.explain;
   const justOn = on && !wasOn;
   wasOn = on;
-  electronMesh.visible = on;
+  // Bei „Viele Elektronen“ bleibt das beobachtete Elektron in der Reihe; der Knopf schaltet nur die Hervorhebung
+  electronMesh.visible = on && (state.showElectron || state.manyElectrons);
+  electronMesh.material.map = state.showElectron ? electronTexture : plainElectronTexture;
   manyGroup.visible = on && state.manyElectrons;
   if (!on) for (const arrow of Object.values(arrows)) arrow.group.visible = false;
   hand.visible = on && state.showExplainHand;
@@ -256,7 +258,7 @@ export function syncExplain(dt) {
   if (state.manyElectrons) {
     const p = electronPositions(), hi = highlightedElectron();
     electronMesh.position.set(p[hi], -SWING.LENGTH - MANY_Y, 0);
-    electronMesh.scale.setScalar(2 * EXPLAIN.ELECTRON_R * 0.75);
+    electronMesh.scale.setScalar(state.showElectron ? 2 * EXPLAIN.ELECTRON_R * 0.75 : 2 * EXPLAIN.MANY.R);
     p.filter((_, i) => i !== hi).forEach((x, i) => otherElectrons[i].position.set(x, -SWING.LENGTH - MANY_Y, 0));
     const shown = Math.abs(electron.x) > TAG_SHIFT, side = Math.sign(electron.x);   // Überschuss auf dieser Seite
     excessTag.visible = deficitTag.visible = shown;

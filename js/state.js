@@ -15,6 +15,7 @@ export const state = {
   showValue: false,   // Messwert zusätzlich als Zahl
   explain: false,     // Erklärmodus: nur Magnet und Schaukel, Elektron im Leiter mit Pfeilen und Hand
   showExplainHand: false,
+  showElectron: true, // Erklärmodus: beobachtetes Elektron zeigen (bei „Viele Elektronen“: hervorheben)
   manyElectrons: false, // Erklärmodus: viele Elektronen und positive Atomrümpfe statt eines Elektrons
   showV: false,       // Erklärmodus: Pfeil v, Feldlinien B, Pfeil F_L ein-/ausblenden (zu Beginn aus)
   showB: false,
