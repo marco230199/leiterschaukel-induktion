@@ -12,6 +12,7 @@ import { resetView as resetSetupView, camera, controls, table } from './szene.js
 import { formatNumber } from './hilfen.js';
 
 const $ = id => document.getElementById(id);
+const DISPLAYS = [['displayMeterBtn', 'meter'], ['displayLedBtn', 'led'], ['displayLampBtn', 'lamp']];
 const EXPLAIN_TOGGLES = [['explainSlowBtn', 'slowMotion'], ['pauseBtn', 'paused'], ['holdBtn', 'hold'],
   ['showElectronBtn', 'showElectron'], ['showVBtn', 'showV'], ['showBBtn', 'showB'], ['showFBtn', 'showF'], ['showHandBtn', 'showExplainHand']];
 
@@ -39,7 +40,7 @@ function updateUi() {
   for (const [id, key] of EXPLAIN_TOGGLES) $(id).setAttribute('aria-pressed', String(state[key]));
   syncFieldLines();
   $('meterSection').hidden = state.explain;
-  for (const [id, display] of [['displayMeterBtn', 'meter'], ['displayLedBtn', 'led']]) {
+  for (const [id, display] of DISPLAYS) {
     $(id).classList.toggle('active', state.display === display);
     $(id).setAttribute('aria-pressed', String(state.display === display));
   }
@@ -57,7 +58,9 @@ function updateUi() {
   $('flipBtn').disabled = $('explainFlipBtn').disabled = flip.active;
   const device = state.display === 'led' ? ['Anode (+)', 'Kathode (−)'] : ['Plus-Buchse', 'Minus-Buchse'];
   const [redTo, blackTo] = state.cablesSwapped ? [device[1], device[0]] : device;
-  $('cableStatus').textContent = `Rotes Kabel (rechtes Stabende) an ${redTo}, schwarzes an ${blackTo}`;
+  $('cableStatus').textContent = state.display === 'lamp'
+    ? 'Bei der Glühlampe spielt die Richtung keine Rolle.'
+    : `Rotes Kabel (rechtes Stabende) an ${redTo}, schwarzes an ${blackTo}`;
   $('angleOut').textContent = state.angle + '°';
   for (const [id, mode] of [['modeUBtn', 'U'], ['modeIBtn', 'I']]) {
     $(id).classList.toggle('active', state.meterMode === mode);
@@ -239,7 +242,7 @@ export function initUi() {
     updateUi();
   });
   $('angleSlider').addEventListener('input', e => { state.angle = Number(e.target.value); updateUi(); });
-  for (const [id, display] of [['displayMeterBtn', 'meter'], ['displayLedBtn', 'led']]) {
+  for (const [id, display] of DISPLAYS) {
     $(id).addEventListener('click', () => {
       if (state.display === display) return;
       cancelDrag();

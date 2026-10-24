@@ -301,3 +301,32 @@ test('Kabel vertauschen: Zeiger und LED reagieren umgekehrt', async () => {
   state.cablesSwapped = false;
   assert.equal(ledBrightness(), 0);
 });
+
+test('Glühlampe (Gedankenexperiment): glüht in beiden Richtungen, erst oberhalb der Schwelle, mit Nachglühen', async () => {
+  const { lamp, lampGlow } = await import('../js/physik.js');
+  Object.assign(state, { setup: 'drehbar', longMagnet: true, northUp: true, angle: 0, magnetAngle: 0, explain: false, display: 'lamp', cablesSwapped: false });
+  resetPhysics();
+  assert.equal(lampGlow(), 0);
+  swing.theta = rad(25);
+  let glowPos = 0, glowNeg = 0;
+  for (let i = 0; i < 1200; i++) {
+    stepPhysics(1 / 600);
+    if (emf() > 0) glowPos = Math.max(glowPos, lampGlow());
+    else glowNeg = Math.max(glowNeg, lampGlow());
+  }
+  assert.ok(glowPos > 0.2 && glowNeg > 0.2, `beide Richtungen: ${glowPos}, ${glowNeg}`);
+  // kleine Schwingung: unter der Schwelle bleibt sie dunkel
+  resetPhysics();
+  swing.theta = rad(4);
+  let maxGlow = 0;
+  for (let i = 0; i < 1200; i++) { stepPhysics(1 / 600); maxGlow = Math.max(maxGlow, lampGlow()); }
+  assert.equal(maxGlow, 0, 'zu wenig Spannung');
+  // Nachglühen: nach dem Anhalten kühlt der Draht ab
+  lamp.heat = 1;
+  swing.omega = 0; swing.theta = 0;
+  stepPhysics(1 / 60);
+  assert.ok(lampGlow() > 0 && lampGlow() < 1, 'kühlt allmählich ab');
+  for (let i = 0; i < 60; i++) stepPhysics(1 / 60);
+  assert.equal(lampGlow(), 0);
+  Object.assign(state, { display: 'meter', longMagnet: false });
+});

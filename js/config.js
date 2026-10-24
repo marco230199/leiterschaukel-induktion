@@ -101,6 +101,11 @@ export const EXPLAIN = {
 // (Anode an der roten Buchse = rechtes Stabende).
 export const LED = { THRESHOLD: 1e-3, FULL: 2e-3, POS: [31, 0, 10] };
 
+// Glühlampe statt Messgerät (Gedankenexperiment, noch unrealistischer als die LED, siehe README):
+// Der Glühdraht heizt sich mit der Leistung ∝ U² auf (Zeitkonstante HEAT_TIME) und glüht ab THRESHOLD sichtbar,
+// bei FULL voll – unabhängig von der Stromrichtung.
+export const LAMP = { THRESHOLD: 1.5e-3, FULL: 5e-3, HEAT_TIME: 0.08, POS: LED.POS };
+
 // Öffentliche Adresse (GitHub Pages): für den QR-Code, wenn die Seite lokal geöffnet ist
 export const PUBLIC_URL = 'https://marco230199.github.io/leiterschaukel-induktion/';
 

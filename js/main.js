@@ -8,6 +8,7 @@ import { stepPhysics } from './physik.js';
 import { syncApparatus } from './aufbau.js';
 import { syncMeter } from './messgeraet.js';
 import { syncLed } from './led.js';
+import { syncLamp } from './gluehlampe.js';
 import { initUi, animateFlip, updateValue, updateHoldSlider } from './bedienfeld.js';
 import { syncExplain } from './erklaerung.js';
 import './ziehen.js';
@@ -26,6 +27,7 @@ renderer.setAnimationLoop(() => {
   syncApparatus();
   syncMeter();
   syncLed();
+  syncLamp();
   syncExplain(dt);
   updateValue();
   updateHoldSlider();

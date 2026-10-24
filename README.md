@@ -59,6 +59,21 @@ kein Erklärtext – die Einordnung gehört in den Unterricht:
   Leiterstücke. Mit einigen hundert bis tausend Windungen und schneller Bewegung erreicht man Volt –
   so arbeiten Fahrraddynamo und Generator.
 
+## Glühlampe statt Messgerät (Gedankenexperiment)
+
+Als dritte Anzeige lässt sich eine Glühlampe in einer Fassung anschließen. Auch hier steht in der Simulation
+kein Erklärtext:
+
+- **Noch unrealistischer als die LED.** Ein kleines Glühlämpchen (z. B. 3,8 V / 0,07 A) braucht rund 1 V, um
+  überhaupt sichtbar zu glühen, und vor allem Leistung: einige 10 mW. Die Leiterschaukel liefert etwa 2 mV
+  und – bei einem Kreiswiderstand um 1 Ω – nur Mikrowatt; es fehlen mehrere Zehnerpotenzen.
+- **Im Gedankenexperiment** glüht der Draht sichtbar ab 1,5 mV und ist bei 5 mV voll hell. Die Helligkeit folgt
+  der Leistung (∝ U²); der Draht heizt sich kurz auf und glüht nach (Zeitkonstante 0,08 s). Er glüht erst
+  dunkelrot, dann orange, bei voller Leistung warmweiß. Die Lampe wirkt nicht auf die Schaukel zurück.
+- **Unterschied zur LED:** Die Glühlampe leuchtet **in beiden Stromrichtungen**, also bei jeder Halbschwingung;
+  „Kabel vertauschen“ ändert nichts. Bei kleinen Schwingungen bleibt sie dunkel, während die LED (Schwelle
+  1 mV) schon aufblitzt.
+
 ## Erklärung: Elektron im Leiter
 
 Der Knopf „Erklärung: Elektron im Leiter“ blendet alles Störende aus (Stative, Querstange, Halter, Messgerät,
@@ -127,6 +142,7 @@ leiterschaukel-induktion/
 │   ├── aufbau.js       # Stativ, Leiterschaukel, Hufeisenmagnet mit Drehgelenk
 │   ├── messgeraet.js   # Zeigermessgerät und Kabel
 │   ├── led.js          # LED statt Messgerät (Gedankenexperiment)
+│   ├── gluehlampe.js   # Glühlampe statt Messgerät (Gedankenexperiment)
 │   ├── erklaerung.js   # Erklärmodus: Elektron, Pfeile v/B/F_L, Hand zur Drei-Finger-Regel
 │   ├── link.js         # „Link zeigen“: QR-Code und Adresse
 │   ├── ziehen.js       # Schaukel bzw. Magnet (auf dem Tisch) mit Maus/Finger ziehen

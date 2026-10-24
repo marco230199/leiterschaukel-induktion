@@ -8,7 +8,7 @@ export const state = {
   angle: 0,           // eingestellter Drehwinkel α des Magneten in Grad (0° … 90°)
   magnetAngle: 0,     // aktueller Drehwinkel (läuft dem eingestellten Winkel hinterher)
   cablesSwapped: false, // Kabel am Messgerät bzw. an der LED vertauscht (rot an −, schwarz an +)
-  display: 'meter',   // Anzeige am Ende der Kabel: 'meter' (Zeigermessgerät) oder 'led' (Gedankenexperiment)
+  display: 'meter',   // Anzeige am Ende der Kabel: 'meter' (Zeigermessgerät), 'led' oder 'lamp' (Gedankenexperimente)
   meterMode: 'U',     // 'U': Spannung messen (hochohmig, kein Strom) · 'I': Strom messen (Kreis geschlossen)
   range: 3,           // Messbereich ±3 mV bzw. ±3 mA
   brakeBoost: false,  // Gedankenexperiment: Bremskraft bei Strommessung stark verstärkt

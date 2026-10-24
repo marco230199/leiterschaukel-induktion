@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------
 import {
   SWING, MAGNET, B_FIELD, L_FIELD, G, PENDULUM_L, SWING_MASS, AIR_DAMPING, CIRCUIT_R, BRAKE_BOOST,
-  EXPLAIN, LED, MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, PUSH_ANGLE_LONG, METER, MAGNET_DRAG_MAX_SPEED, magnetLegs, magnetZRange,
+  EXPLAIN, LED, LAMP, MAGNET_TURN_SPEED, DRAG_TIME, DRAG_MAX_OMEGA, PUSH_ANGLE, PUSH_ANGLE_LONG, METER, MAGNET_DRAG_MAX_SPEED, magnetLegs, magnetZRange,
 } from './config.js';
 import { state } from './state.js';
 
@@ -22,6 +22,8 @@ export const swing = { theta: 0, omega: 0, dragging: false, target: 0, holdTarge
 export const magnetMotion = { z: 0, v: 0, dragging: false, target: 0 };
 // Zeiger des Messgeräts: Ausschlag als Anteil des Vollausschlags (−1 … 1), Geschwindigkeit
 export const needle = { pos: 0, vel: 0 };
+// Glühlampe: Temperatur des Glühdrahts als Anteil der Volllast (1 = Leistung bei voller Helligkeit)
+export const lamp = { heat: 0 };
 // Erklärmodus: Lage des Elektrons entlang des Stabs in cm (0 = Mitte, positiv = rechts).
 // Bei „Viele Elektronen“ ist x die gemeinsame Verschiebung aller Elektronen (siehe electronPositions).
 export const electron = { x: 0 };
@@ -131,6 +133,18 @@ const cableSign = () => (state.cablesSwapped ? -1 : 1);
 
 // Helligkeit der LED (0 … 1): erst oberhalb der Schwellspannung, nur in Durchlassrichtung (Anode positiv)
 export const ledBrightness = () => clamp((cableSign() * emf() - LED.THRESHOLD) / LED.FULL, 0, 1);
+
+// Helligkeit der Glühlampe (0 … 1): sichtbares Glühen ab der Schwelle, unabhängig von der Stromrichtung
+export function lampGlow() {
+  const start = (LAMP.THRESHOLD / LAMP.FULL) ** 2;
+  return clamp((lamp.heat - start) / (1 - start), 0, 1);
+}
+
+// Glühdraht folgt der Leistung ∝ U² mit kurzer Verzögerung (Aufheizen und Nachglühen)
+function stepLamp(dt) {
+  const power = Math.min((emf() / LAMP.FULL) ** 2, 1.5);
+  lamp.heat += (power - lamp.heat) * Math.min(1, dt / LAMP.HEAT_TIME);
+}
 
 // Anzeige des Messgeräts in mV bzw. mA
 export const meterReading = () => 1000 * cableSign() * (state.meterMode === 'I' ? inducedCurrent() : emf());
@@ -284,6 +298,7 @@ export function stepPhysics(dt) {
     turnMagnet(h);
     stepSwing(h);
     stepNeedle(h);
+    stepLamp(h);
     stepElectron(h);
   }
 }
@@ -379,4 +394,5 @@ export function resetPhysics() {
   resetMagnet();
   resetElectron();
   Object.assign(needle, { pos: 0, vel: 0 });
+  lamp.heat = 0;
 }

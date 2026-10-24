@@ -10,6 +10,7 @@ import { mat } from './materialien.js';
 import { scene } from './szene.js';
 import { socketPoint } from './aufbau.js';
 import { ledSocket, setLedVisible } from './led.js';
+import { lampSocket, setLampVisible } from './gluehlampe.js';
 
 // Das Messgerät steht auf dem Tisch und lässt sich um die senkrechte Achse drehen (Ziehen oder Knopf)
 const meter = new THREE.Group();
@@ -233,12 +234,14 @@ export function buildCables() {
 
 // Ende eines Kabels am Messgerät bzw. an der LED: Plus-Buchse/Anode (+1) oder Minus-Buchse/Kathode (−1);
 // fromFront: das Kabel kommt von vorne (rot) bzw. von hinten (schwarz) an die LED-Platte
-const toDevice = (pole, fromFront) =>
-  (state.display === 'led' ? intoLed(pole, fromFront) : intoSocket(pole > 0 ? SOCKET_PLUS : SOCKET_COM));
+const toDevice = (pole, fromFront) => {
+  if (state.display === 'led') return intoBoard(ledSocket(pole), fromFront);
+  if (state.display === 'lamp') return intoBoard(lampSocket(pole), fromFront);
+  return intoSocket(pole > 0 ? SOCKET_PLUS : SOCKET_COM);
+};
 
-// Letztes Stück zur LED-Platte: über den Tisch heran (von vorne bzw. hinten) und von oben in die Buchse
-function intoLed(side, fromFront) {
-  const socket = ledSocket(side);
+// Letztes Stück zur LED- bzw. Lampenplatte: über den Tisch heran (von vorne bzw. hinten), von oben in die Buchse
+function intoBoard(socket, fromFront) {
   const dz = fromFront ? 1 : -1;
   return [[socket.x - 2, 0.4, socket.z + dz * 6], [socket.x, socket.y + 3, socket.z + dz * 1.5], socket.toArray()];
 }
@@ -247,6 +250,7 @@ function intoLed(side, fromFront) {
 export function applyDisplay() {
   meter.visible = !state.explain && state.display === 'meter';
   setLedVisible(!state.explain && state.display === 'led');
+  setLampVisible(!state.explain && state.display === 'lamp');
 }
 
 // ---------------- Messgerät drehen
