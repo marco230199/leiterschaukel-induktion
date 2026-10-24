@@ -60,7 +60,8 @@ kein Erklärtext – die Einordnung gehört in den Unterricht:
 
 Der Knopf „Erklärung: Elektron im Leiter“ blendet alles Störende aus (Stative, Querstange, Halter, Messgerät,
 Kabel, Tisch). Es bleiben der Magnet und die Schaukel. Der Stab ist dicker und
-durchsichtig; in seiner Mitte sitzt ein (stark vergrößertes) Elektron. Die Zeitlupe ist eingeschaltet, die
+durchsichtig; in seiner Mitte sitzt ein (stark vergrößertes) Elektron, dargestellt als blaue Kugel mit
+„−“ darin (Atomrümpfe bei „Viele Elektronen“: rote Kugeln mit „+“). Die Zeitlupe ist eingeschaltet, die
 Kamera schaut schräg von vorne auf den Stab. Schaukel (und auf dem Tisch der Magnet) lassen sich weiter ziehen.
 Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
 

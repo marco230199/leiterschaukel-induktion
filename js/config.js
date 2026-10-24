@@ -90,7 +90,7 @@ export const EXPLAIN = {
   ELECTRON_MARGIN: 1,         // Elektron bleibt so weit vor dem Stabende stehen
   // „Viele Elektronen“: so viele Elektronen und ortsfeste positive Atomrümpfe, gleichmäßig verteilt; am Stabende
   // drängen sich die Elektronen mit dem Mindestabstand PACK zusammen
-  MANY: { COUNT: 11, SPACING: 1.2, PACK: 0.75, R: 0.36, ION_R: 0.28 },
+  MANY: { COUNT: 11, SPACING: 1.2, PACK: 0.75, R: 0.36, ION_R: 0.32 },
   ARROW_V: 25,                // Pfeillänge in cm pro m/s
   ARROW_F: 200,               // Pfeillänge in cm pro V/m
   ARROW_MAX: 12,

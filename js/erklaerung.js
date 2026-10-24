@@ -48,34 +48,57 @@ function makeTag(text, color, height = 1.6) {
 // ---------------- Elektron im Stab (Kind der Schaukel, bewegt sich mit ihr)
 
 // Wird über Stab und Magnet gezeichnet, damit es immer gut zu sehen ist
-const electronMesh = addMesh(new THREE.SphereGeometry(EXPLAIN.ELECTRON_R, 24, 16), mat.electron, swingGroup);
-electronMesh.castShadow = false;
-mat.electron.depthTest = false;
-electronMesh.renderOrder = 9;
-const minus = makeTag('−', '#0d47a1', 0.9);
-minus.position.set(0, EXPLAIN.ELECTRON_R + 0.6, 0);
-electronMesh.add(minus);
+// Ladungen als Kugel mit Vorzeichen darin: schattierte Scheibe, die immer zur Kamera zeigt und über Stab und
+// Magnet gezeichnet wird. ring: weißer Rand (hebt das beobachtete Elektron hervor).
+function chargeTexture(light, dark, sign, ring = false) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(46, 42, 6, 64, 64, 62);
+  gradient.addColorStop(0, light);
+  gradient.addColorStop(1, dark);
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(64, 64, 60, 0, Math.PI * 2);
+  ctx.fill();
+  if (ring) {
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(64, 64, 56, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // Vorzeichen als Balken, damit es genau in der Mitte sitzt
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(34, 57, 60, 14);
+  if (sign === '+') ctx.fillRect(57, 34, 14, 60);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+function makeCharge(texture, radius, parent, renderOrder) {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false }));
+  sprite.scale.setScalar(2 * radius);
+  sprite.renderOrder = renderOrder;
+  parent.add(sprite);
+  return sprite;
+}
+const electronTexture = chargeTexture('#64b5f6', '#0d47a1', '−', true);
+const electronMesh = makeCharge(electronTexture, EXPLAIN.ELECTRON_R, swingGroup, 9);
 
 // ---------------- Viele Elektronen: weitere Elektronen (unter der Stabachse) und ortsfeste positive
 // Atomrümpfe (darüber). Das hervorgehobene Elektron ist electronMesh; es trägt die Pfeile.
 const MANY_Y = 0.45;                                  // Abstand von der Stabachse
 const manyGroup = new THREE.Group();
 swingGroup.add(manyGroup);
-mat.electronPlain.depthTest = mat.ion.depthTest = false;
-const otherElectrons = [], ions = [];
+const ionTexture = chargeTexture('#ff8a80', '#b71c1c', '+');
+const plainElectronTexture = chargeTexture('#90caf9', '#1565c0', '−');
+const otherElectrons = [];
 for (const x of electronRestPositions()) {
-  const ion = addMesh(new THREE.SphereGeometry(EXPLAIN.MANY.ION_R, 16, 12), mat.ion, manyGroup);
+  const ion = makeCharge(ionTexture, EXPLAIN.MANY.ION_R, manyGroup, 8);
   ion.position.set(x, -SWING.LENGTH + MANY_Y, 0);
-  ion.renderOrder = 8;
-  ion.castShadow = false;
-  ions.push(ion);
 }
-for (let i = 0; i < EXPLAIN.MANY.COUNT - 1; i++) {
-  const e = addMesh(new THREE.SphereGeometry(EXPLAIN.MANY.R, 16, 12), mat.electronPlain, manyGroup);
-  e.renderOrder = 8;
-  e.castShadow = false;
-  otherElectrons.push(e);
-}
+for (let i = 0; i < EXPLAIN.MANY.COUNT - 1; i++) otherElectrons.push(makeCharge(plainElectronTexture, EXPLAIN.MANY.R, manyGroup, 8));
 // Beschriftung der Stabenden, sobald sich die Elektronen merklich verschoben haben
 const excessTag = makeTag('Elektronenüberschuss  −', '#0d47a1', 1.1);
 const deficitTag = makeTag('Elektronenmangel  +', '#b71c1c', 1.1);
@@ -233,7 +256,7 @@ export function syncExplain(dt) {
   if (state.manyElectrons) {
     const p = electronPositions(), hi = highlightedElectron();
     electronMesh.position.set(p[hi], -SWING.LENGTH - MANY_Y, 0);
-    electronMesh.scale.setScalar(0.75);
+    electronMesh.scale.setScalar(2 * EXPLAIN.ELECTRON_R * 0.75);
     p.filter((_, i) => i !== hi).forEach((x, i) => otherElectrons[i].position.set(x, -SWING.LENGTH - MANY_Y, 0));
     const shown = Math.abs(electron.x) > TAG_SHIFT, side = Math.sign(electron.x);   // Überschuss auf dieser Seite
     excessTag.visible = deficitTag.visible = shown;
@@ -241,7 +264,7 @@ export function syncExplain(dt) {
     deficitTag.position.set(-side * (SWING.BAR_LEN / 2 - 1.5), -SWING.LENGTH + 2.6, 0);
   } else {
     electronMesh.position.set(electron.x, -SWING.LENGTH, 0);
-    electronMesh.scale.setScalar(1);
+    electronMesh.scale.setScalar(2 * EXPLAIN.ELECTRON_R);
   }
   electronMesh.updateMatrixWorld();
   origin.setFromMatrixPosition(electronMesh.matrixWorld);
