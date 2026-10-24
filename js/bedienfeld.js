@@ -34,6 +34,8 @@ function updateUi() {
   $('pauseBtn').textContent = state.paused ? 'Weiter' : 'Pause';
   $('holdBtn').textContent = state.hold ? 'Leiter loslassen' : 'Leiter festhalten';
   $('holdBox').hidden = !state.hold;
+  $('manyBtn').setAttribute('aria-pressed', String(state.manyElectrons));
+  $('manyLegend').hidden = $('manyInfo').hidden = !state.manyElectrons;
   for (const [id, key] of EXPLAIN_TOGGLES) $(id).setAttribute('aria-pressed', String(state[key]));
   $('meterSection').hidden = state.explain;
   $('slowCheck').checked = state.slowMotion;
@@ -213,6 +215,11 @@ export function initUi() {
   holdSlider.addEventListener('blur', () => { holdSliderActive = false; });
   holdSlider.addEventListener('pointerdown', () => { holdSliderActive = true; });
   $('electronResetBtn').addEventListener('click', resetElectron);
+  $('manyBtn').addEventListener('click', () => {   // Elektronen starten gleichmäßig verteilt
+    state.manyElectrons = !state.manyElectrons;
+    resetElectron();
+    updateUi();
+  });
   $('angleSlider').addEventListener('input', e => { state.angle = Number(e.target.value); updateUi(); });
   $('modeUBtn').addEventListener('click', () => { state.meterMode = 'U'; updateUi(); });
   $('modeIBtn').addEventListener('click', () => { state.meterMode = 'I'; updateUi(); });

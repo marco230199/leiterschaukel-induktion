@@ -239,3 +239,27 @@ test('Festhalten: Leiter pendelt nicht, folgt Regler bzw. Finger und bleibt beim
   setHold(false);
   state.explain = false;
 });
+
+test('Viele Elektronen: drängen sich am einen Ende (Überschuss), am anderen bleibt Mangel', async () => {
+  const { electronPositions, electronRestPositions, manyDriftLimit } = await import('../js/physik.js');
+  const { EXPLAIN } = await import('../js/config.js');
+  Object.assign(state, { setup: 'drehbar', longMagnet: true, northUp: true, angle: 0, magnetAngle: 0, explain: true, manyElectrons: true });
+  resetPhysics();
+  const rest = electronRestPositions();
+  assert.deepEqual(electronPositions(0), rest, 'zu Beginn gleichmäßig verteilt');
+  // Stab lange nach vorne bewegen: Kraft auf die Elektronen nach links
+  startDrag(0);
+  for (let i = 0; i < 240; i++) { dragTo(rad(25) * Math.min(1, i / 120)); stepPhysics(1 / 60); }
+  endDrag();
+  const p = electronPositions();
+  const left = p.filter(x => x < 0).length, right = p.filter(x => x > 0).length;
+  assert.ok(left > right + 4, `links ${left}, rechts ${right}`);
+  for (let i = 1; i < p.length; i++) assert.ok(p[i] - p[i - 1] >= EXPLAIN.MANY.PACK - 1e-9, 'Mindestabstand');
+  assert.ok(p[0] >= -(7.5 - EXPLAIN.ELECTRON_MARGIN) - 1e-9, 'bleiben im Stab');
+  assert.ok(Math.abs(electron.x) <= manyDriftLimit() + 1e-9);
+  // ganz zurück: wieder gleichmäßig verteilt
+  assert.deepEqual(electronPositions(0), rest);
+  state.manyElectrons = false;
+  state.longMagnet = false;
+  state.explain = false;
+});

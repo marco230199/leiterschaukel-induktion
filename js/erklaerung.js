@@ -9,7 +9,9 @@
 import * as THREE from 'three';
 import { SWING, EXPLAIN, axisHeight } from './config.js';
 import { state } from './state.js';
-import { electron, relativeVelocity, fieldAtBar, electronForce } from './physik.js';
+import {
+  electron, relativeVelocity, fieldAtBar, electronForce, electronPositions, electronRestPositions, highlightedElectron,
+} from './physik.js';
 import { swingGroup } from './aufbau.js';
 import { addMesh } from './hilfen.js';
 import { mat, COLOR_V, COLOR_B, COLOR_F } from './materialien.js';
@@ -53,6 +55,32 @@ electronMesh.renderOrder = 9;
 const minus = makeTag('−', '#0d47a1', 0.9);
 minus.position.set(0, EXPLAIN.ELECTRON_R + 0.6, 0);
 electronMesh.add(minus);
+
+// ---------------- Viele Elektronen: weitere Elektronen (unter der Stabachse) und ortsfeste positive
+// Atomrümpfe (darüber). Das hervorgehobene Elektron ist electronMesh; es trägt die Pfeile.
+const MANY_Y = 0.45;                                  // Abstand von der Stabachse
+const manyGroup = new THREE.Group();
+swingGroup.add(manyGroup);
+mat.electronPlain.depthTest = mat.ion.depthTest = false;
+const otherElectrons = [], ions = [];
+for (const x of electronRestPositions()) {
+  const ion = addMesh(new THREE.SphereGeometry(EXPLAIN.MANY.ION_R, 16, 12), mat.ion, manyGroup);
+  ion.position.set(x, -SWING.LENGTH + MANY_Y, 0);
+  ion.renderOrder = 8;
+  ion.castShadow = false;
+  ions.push(ion);
+}
+for (let i = 0; i < EXPLAIN.MANY.COUNT - 1; i++) {
+  const e = addMesh(new THREE.SphereGeometry(EXPLAIN.MANY.R, 16, 12), mat.electronPlain, manyGroup);
+  e.renderOrder = 8;
+  e.castShadow = false;
+  otherElectrons.push(e);
+}
+// Beschriftung der Stabenden, sobald sich die Elektronen merklich verschoben haben
+const excessTag = makeTag('Elektronenüberschuss  −', '#0d47a1', 1.1);
+const deficitTag = makeTag('Elektronenmangel  +', '#b71c1c', 1.1);
+for (const tag of [excessTag, deficitTag]) manyGroup.add(tag);
+const TAG_SHIFT = 1;                                   // ab dieser Verschiebung (cm) erscheinen die Schilder
 
 // ---------------- Pfeile am Elektron (in Weltkoordinaten, Länge ∝ Größe)
 
@@ -201,7 +229,20 @@ export function syncExplain(dt) {
   hand.visible = on && state.showExplainHand;
   if (!on) return;
 
-  electronMesh.position.set(electron.x, -SWING.LENGTH, 0);
+  manyGroup.visible = state.manyElectrons;
+  if (state.manyElectrons) {
+    const p = electronPositions(), hi = highlightedElectron();
+    electronMesh.position.set(p[hi], -SWING.LENGTH - MANY_Y, 0);
+    electronMesh.scale.setScalar(0.75);
+    p.filter((_, i) => i !== hi).forEach((x, i) => otherElectrons[i].position.set(x, -SWING.LENGTH - MANY_Y, 0));
+    const shown = Math.abs(electron.x) > TAG_SHIFT, side = Math.sign(electron.x);   // Überschuss auf dieser Seite
+    excessTag.visible = deficitTag.visible = shown;
+    excessTag.position.set(side * (SWING.BAR_LEN / 2 - 1.5), -SWING.LENGTH - 2.4, 0);
+    deficitTag.position.set(-side * (SWING.BAR_LEN / 2 - 1.5), -SWING.LENGTH + 2.6, 0);
+  } else {
+    electronMesh.position.set(electron.x, -SWING.LENGTH, 0);
+    electronMesh.scale.setScalar(1);
+  }
   electronMesh.updateMatrixWorld();
   origin.setFromMatrixPosition(electronMesh.matrixWorld);
 

@@ -45,15 +45,20 @@
       <button id="showFBtn" type="button"><span class="dot" style="background:#c62828"></span>F_L</button>
       <button id="showHandBtn" type="button">Hand</button>
     </div>
+    <button id="manyBtn" class="state" type="button" aria-pressed="false">Viele Elektronen</button>
     <ul class="legend">
       <li><span class="dot" style="background:#2e7d32"></span>v: Geschwindigkeit des Leiters</li>
       <li><span class="dot" style="background:#1565c0"></span>B: Magnetfeld (von N nach S)</li>
       <li><span class="dot" style="background:#c62828"></span>F_L: Lorentzkraft auf das Elektron</li>
+      <li id="manyLegend" hidden><span class="dot" style="background:#e53935"></span>positive Atomrümpfe (bleiben an
+        ihrem Platz); blau: Elektronen</li>
     </ul>
+    <p class="status" id="manyInfo" hidden>Die Lorentzkraft schiebt alle Elektronen zum selben Ende: Dort entsteht ein
+      Elektronenüberschuss (Minuspol), am anderen Ende ein Elektronenmangel (Pluspol). So entsteht die Spannung.</p>
     <p class="status" id="explainHandInfo">Rechte Hand: Daumen v (Bewegung der positiven Ladungen mit dem Leiter),
       Zeigefinger B, Mittelfinger Kraft auf eine positive Ladung. Das Elektron ist negativ geladen: Die Kraft
       auf das Elektron zeigt entgegengesetzt zum Mittelfinger.</p>
-    <button id="electronResetBtn" type="button">Elektron in die Mitte</button>
+    <button id="electronResetBtn" type="button">Elektronen zurücksetzen</button>
   </aside>
 
   <aside class="panel">

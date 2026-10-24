@@ -22,7 +22,8 @@ export const swing = { theta: 0, omega: 0, dragging: false, target: 0, holdTarge
 export const magnetMotion = { z: 0, v: 0, dragging: false, target: 0 };
 // Zeiger des Messgeräts: Ausschlag als Anteil des Vollausschlags (−1 … 1), Geschwindigkeit
 export const needle = { pos: 0, vel: 0 };
-// Erklärmodus: Lage des Elektrons entlang des Stabs in cm (0 = Mitte, positiv = rechts)
+// Erklärmodus: Lage des Elektrons entlang des Stabs in cm (0 = Mitte, positiv = rechts).
+// Bei „Viele Elektronen“ ist x die gemeinsame Verschiebung aller Elektronen (siehe electronPositions).
 export const electron = { x: 0 };
 
 // ---------------- Geometrie
@@ -220,10 +221,37 @@ function stepNeedle(dt) {
   }
 }
 
-// Erklärmodus: Elektron wandert entlang des Stabs, solange die Lorentzkraft wirkt (bleibt am Ende stehen)
+// ---------------- Viele Elektronen
+
+const electronEnd = () => SWING.BAR_LEN / 2 - EXPLAIN.ELECTRON_MARGIN;   // so weit dürfen Elektronen nach außen
+
+// Ruhelagen der Elektronen (zugleich Plätze der positiven Atomrümpfe), symmetrisch um die Mitte
+export function electronRestPositions() {
+  const { COUNT, SPACING } = EXPLAIN.MANY;
+  return Array.from({ length: COUNT }, (_, i) => (i - (COUNT - 1) / 2) * SPACING);
+}
+
+// Größte gemeinsame Verschiebung: dann liegen alle Elektronen dicht gepackt am Stabende
+export function manyDriftLimit() {
+  const rest = electronRestPositions();
+  return electronEnd() - (rest.length - 1) * EXPLAIN.MANY.PACK - rest[0];
+}
+
+// Lagen aller Elektronen bei der gemeinsamen Verschiebung d: jedes Elektron um d verschoben, am Stabende
+// drängen sie sich mit Mindestabstand zusammen (Reihenfolge bleibt erhalten)
+export function electronPositions(d = electron.x) {
+  const rest = electronRestPositions(), end = electronEnd(), gap = EXPLAIN.MANY.PACK;
+  const p = rest.map(x => x + d);
+  for (let i = 0; i < p.length; i++) p[i] = Math.max(p[i], i === 0 ? -end : p[i - 1] + gap);
+  for (let i = p.length - 1; i >= 0; i--) p[i] = Math.min(p[i], i === p.length - 1 ? end : p[i + 1] - gap);
+  return p;
+}
+export const highlightedElectron = () => Math.floor(EXPLAIN.MANY.COUNT / 2);   // das mittlere
+
+// Erklärmodus: Elektron(en) wandern entlang des Stabs, solange die Lorentzkraft wirkt (bleiben am Ende stehen)
 function stepElectron(dt) {
   if (!state.explain) return;
-  const max = SWING.BAR_LEN / 2 - EXPLAIN.ELECTRON_MARGIN;
+  const max = state.manyElectrons ? manyDriftLimit() : electronEnd();
   electron.x = clamp(electron.x + EXPLAIN.DRIFT * electronForce().x * dt, -max, max);
 }
 

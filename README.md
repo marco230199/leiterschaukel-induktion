@@ -52,7 +52,11 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
   Leiters“ (Winkel in Grad, vorne +, hinten −) oder durch Ziehen lässt er sich bewegen; er folgt direkt und
   bleibt beim Loslassen stehen. „Auslenken und loslassen“ beendet das Festhalten.
 - **v, B, F_L, Hand:** Pfeile und Hand einzeln ein- und ausblenden.
-- **Elektron in die Mitte**
+- **Viele Elektronen:** 11 Elektronen (blau) und ebenso viele ortsfeste positive Atomrümpfe (rot) im Stab.
+  Die Lorentzkraft schiebt alle Elektronen zum selben Ende; sie drängen sich dort zusammen
+  (Elektronenüberschuss, Minuspol), am anderen Ende bleiben nur die Atomrümpfe (Elektronenmangel, Pluspol).
+  Beschriftungen an den Stabenden erscheinen, sobald sich die Elektronen merklich verschoben haben.
+- **Elektronen zurücksetzen**
 
 - Pfeile am Elektron: Geschwindigkeit v des Leiters (grün), Magnetfeld B (blau), Lorentzkraft F_L auf das
   Elektron (rot); die Längen wachsen mit v, B und v·B.
