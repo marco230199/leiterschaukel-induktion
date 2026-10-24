@@ -1,8 +1,8 @@
 // ------------------------------------------------------------------
 // Erklärmodus „Elektron im Leiter“
 // Ein (stark vergrößertes) Elektron sitzt im durchsichtigen Stab und bewegt sich mit ihm durch das Magnetfeld.
-// Pfeile am Elektron: Geschwindigkeit v des Leiters (grün), Magnetfeld B (blau), Lorentzkraft F_L auf das
-// Elektron (rot). Daneben eine rechte Hand zur Drei-Finger-Regel: Daumen v (Bewegung der positiven Ladungen
+// Pfeile am Elektron: Geschwindigkeit v des Leiters (grün), Lorentzkraft F_L auf das Elektron (rot);
+// das Magnetfeld B zeigen die Feldlinien im Polspalt (aufbau.js). Daneben eine rechte Hand zur Drei-Finger-Regel: Daumen v (Bewegung der positiven Ladungen
 // mit dem Leiter), Zeigefinger B, Mittelfinger Kraft auf eine positive Ladung – auf das Elektron wirkt die
 // Kraft entgegengesetzt.
 // ------------------------------------------------------------------
@@ -10,11 +10,11 @@ import * as THREE from 'three';
 import { SWING, EXPLAIN, axisHeight } from './config.js';
 import { state } from './state.js';
 import {
-  electron, relativeVelocity, fieldAtBar, electronForce, electronPositions, electronRestPositions, highlightedElectron,
+  electron, relativeVelocity, electronForce, electronPositions, electronRestPositions, highlightedElectron,
 } from './physik.js';
 import { swingGroup } from './aufbau.js';
 import { addMesh } from './hilfen.js';
-import { mat, COLOR_V, COLOR_B, COLOR_F } from './materialien.js';
+import { mat, COLOR_V, COLOR_B, COLOR_F } from './materialien.js';   // COLOR_B: Zeigefinger der Hand
 import { scene, camera } from './szene.js';
 
 const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -98,7 +98,7 @@ function makeArrow(color, label) {
   scene.add(group);
   return { group, shaft, head, tag };
 }
-const arrows = { v: makeArrow(COLOR_V, 'v'), B: makeArrow(COLOR_B, 'B'), F: makeArrow(COLOR_F, 'F_L') };
+const arrows = { v: makeArrow(COLOR_V, 'v'), F: makeArrow(COLOR_F, 'F_L') };
 
 const up = v3(0, 1, 0);
 const tmp = new THREE.Vector3();
@@ -201,7 +201,7 @@ const middle = new THREE.Vector3();
 function fieldDirection() {
   const a = THREE.MathUtils.degToRad(state.magnetAngle);
   const s = state.northUp ? 1 : -1;
-  return v3(0, -s * Math.cos(a), s * Math.sin(a));   // wie fieldAtBar(), aber ohne Abfall am Rand
+  return v3(0, -s * Math.cos(a), s * Math.sin(a));   // wie fieldAtBar() in physik.js, aber ohne Abfall am Rand
 }
 function updateHandTarget() {
   const v = relativeVelocity();
@@ -246,11 +246,10 @@ export function syncExplain(dt) {
   electronMesh.updateMatrixWorld();
   origin.setFromMatrixPosition(electronMesh.matrixWorld);
 
-  const v = relativeVelocity(), B = fieldAtBar(), F = electronForce();
+  const v = relativeVelocity(), F = electronForce();
   const len = (vec, scale) => Math.min(EXPLAIN.ARROW_MAX, Math.hypot(vec.x, vec.y, vec.z) * scale);
   // Pfeile einzeln abschaltbar; in der Pause zeigen sie den eingefrorenen Augenblick
   setArrow(arrows.v, origin, v3(v.x, v.y, v.z), state.showV ? len(v, EXPLAIN.ARROW_V) : 0);
-  setArrow(arrows.B, origin, v3(B.x, B.y, B.z), state.showB ? len(B, EXPLAIN.ARROW_B / 0.1) : 0);
   setArrow(arrows.F, origin, v3(F.x, F.y, F.z), state.showF ? len(F, EXPLAIN.ARROW_F) : 0);
 
   if (hand.visible) {

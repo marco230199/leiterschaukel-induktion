@@ -93,7 +93,6 @@ export const EXPLAIN = {
   MANY: { COUNT: 11, SPACING: 1.2, PACK: 0.75, R: 0.36, ION_R: 0.28 },
   ARROW_V: 25,                // Pfeillänge in cm pro m/s
   ARROW_F: 200,               // Pfeillänge in cm pro V/m
-  ARROW_B: 6,                 // Pfeillänge für das volle Feld
   ARROW_MAX: 12,
 };
 

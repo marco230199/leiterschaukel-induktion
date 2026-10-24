@@ -1,4 +1,5 @@
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }   /* auch bei Elementen mit eigenem display (z. B. Legendenzeilen) */
 html, body {
   margin: 0;
   height: 100%;

@@ -4,7 +4,7 @@
 import { METER, SWING } from './config.js';
 import { state } from './state.js';
 import { pushSwing, stopSwing, meterReading, resetPhysics, resetMagnet, resetElectron, setHold, holdTo, swing } from './physik.js';
-import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus } from './aufbau.js';
+import { applyMagnetPoles, setMagnetOpacity, applySetup, syncApparatus, syncFieldLines } from './aufbau.js';
 import { updateMeterFace, buildCables, turnMeterTowards, applyDisplay } from './messgeraet.js';
 import { explainView } from './erklaerung.js';
 import { cancelDrag } from './ziehen.js';
@@ -37,6 +37,7 @@ function updateUi() {
   $('manyBtn').setAttribute('aria-pressed', String(state.manyElectrons));
   $('manyLegend').hidden = $('manyInfo').hidden = !state.manyElectrons;
   for (const [id, key] of EXPLAIN_TOGGLES) $(id).setAttribute('aria-pressed', String(state[key]));
+  syncFieldLines();
   $('meterSection').hidden = state.explain;
   for (const [id, display] of [['displayMeterBtn', 'meter'], ['displayLedBtn', 'led']]) {
     $(id).classList.toggle('active', state.display === display);
@@ -125,6 +126,7 @@ function setExplain(on) {
   cancelDrag();
   state.explain = on;
   state.paused = false;
+  if (on) Object.assign(state, { showV: false, showB: false, showF: false, showExplainHand: false });   // zu Beginn aus
   setHold(false);
   if (on) state.slowMotion = true;
   stopSwing();

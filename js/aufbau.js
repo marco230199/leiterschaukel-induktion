@@ -260,8 +260,8 @@ export function applySetup() {
   const showHolder = state.setup === 'drehbar' && !state.explain;
   for (const b of Object.values(bodies)) {
     b.holderArm.visible = showHolder;
-    b.fieldLines.visible = state.explain;
   }
+  syncFieldLines();
   holderStand.visible = showHolder;
   stands.visible = rigDecor.visible = !state.explain;
   const barScale = state.explain ? EXPLAIN.BAR_R / SWING.BAR_R : 1;
@@ -271,6 +271,11 @@ export function applySetup() {
   mat.copper.depthWrite = !state.explain;
   mat.copper.needsUpdate = true;
   syncApparatus();
+}
+
+// Feldlinien im Spalt: nur im Erklärmodus und wenn „B“ eingeschaltet ist
+export function syncFieldLines() {
+  for (const b of Object.values(bodies)) b.fieldLines.visible = state.explain && state.showB;
 }
 
 // Farben und Beschriftungen passend zur Polung des Magneten

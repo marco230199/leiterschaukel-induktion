@@ -59,7 +59,7 @@ kein Erklärtext – die Einordnung gehört in den Unterricht:
 ## Erklärung: Elektron im Leiter
 
 Der Knopf „Erklärung: Elektron im Leiter“ blendet alles Störende aus (Stative, Querstange, Halter, Messgerät,
-Kabel, Tisch). Es bleiben der Magnet mit Feldlinien im Spalt und die Schaukel. Der Stab ist dicker und
+Kabel, Tisch). Es bleiben der Magnet und die Schaukel. Der Stab ist dicker und
 durchsichtig; in seiner Mitte sitzt ein (stark vergrößertes) Elektron. Die Zeitlupe ist eingeschaltet, die
 Kamera schaut schräg von vorne auf den Stab. Schaukel (und auf dem Tisch der Magnet) lassen sich weiter ziehen.
 Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
@@ -70,15 +70,16 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
 - **Leiter festhalten:** Der Leiter pendelt nicht mehr, er bleibt, wo er ist. Mit dem Regler „Lage des
   Leiters“ (Winkel in Grad, vorne +, hinten −) oder durch Ziehen lässt er sich bewegen; er folgt direkt und
   bleibt beim Loslassen stehen. „Auslenken und loslassen“ beendet das Festhalten.
-- **v, B, F_L, Hand:** Pfeile und Hand einzeln ein- und ausblenden.
+- **v, B, F_L, Hand:** Pfeil v, Feldlinien B, Pfeil F_L und Hand einzeln ein- und ausblenden; beim Wechsel
+  in den Erklärmodus sind alle vier zunächst ausgeschaltet.
 - **Viele Elektronen:** 11 Elektronen (blau) und ebenso viele ortsfeste positive Atomrümpfe (rot) im Stab.
   Die Lorentzkraft schiebt alle Elektronen zum selben Ende; sie drängen sich dort zusammen
   (Elektronenüberschuss, Minuspol), am anderen Ende bleiben nur die Atomrümpfe (Elektronenmangel, Pluspol).
   Beschriftungen an den Stabenden erscheinen, sobald sich die Elektronen merklich verschoben haben.
 - **Elektronen zurücksetzen**
 
-- Pfeile am Elektron: Geschwindigkeit v des Leiters (grün), Magnetfeld B (blau), Lorentzkraft F_L auf das
-  Elektron (rot); die Längen wachsen mit v, B und v·B.
+- Pfeile am Elektron: Geschwindigkeit v des Leiters (grün) und Lorentzkraft F_L auf das Elektron (rot);
+  die Längen wachsen mit v bzw. v·B. Das Magnetfeld B zeigen Feldlinien im Polspalt (blau, von N nach S).
 - Das Elektron wandert stark verlangsamt entlang des Stabs, solange die Lorentzkraft wirkt, und bleibt
   am Stabende stehen. Schwingt die Schaukel zurück, wandert es zurück. „Auslenken und loslassen“ und
   „Elektron in die Mitte“ setzen es wieder in die Mitte.

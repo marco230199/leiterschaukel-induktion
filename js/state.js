@@ -14,11 +14,11 @@ export const state = {
   slowMotion: false,
   showValue: false,   // Messwert zusätzlich als Zahl
   explain: false,     // Erklärmodus: nur Magnet und Schaukel, Elektron im Leiter mit Pfeilen und Hand
-  showExplainHand: true,
+  showExplainHand: false,
   manyElectrons: false, // Erklärmodus: viele Elektronen und positive Atomrümpfe statt eines Elektrons
-  showV: true,        // Erklärmodus: Pfeile v, B, F_L ein-/ausblenden
-  showB: true,
-  showF: true,
+  showV: false,       // Erklärmodus: Pfeil v, Feldlinien B, Pfeil F_L ein-/ausblenden (zu Beginn aus)
+  showB: false,
+  showF: false,
   hold: false,        // Erklärmodus: Leiter festgehalten (pendelt nicht), Lage per Schieberegler oder Ziehen
   paused: false,      // Erklärmodus: Bewegung angehalten (Pfeile zeigen den Augenblick)
 };
