@@ -1,12 +1,14 @@
 // ------------------------------------------------------------------
-// Abgabe im Unterricht (nur wenn die Seite vom Abgabe-Server auf dem Lehrer-Laptop kommt, siehe server/)
+// Abgabe im Unterricht über den Abgabe-Server (siehe server/)
 //
 // Schüler:  „Teilen“ schickt die eigene Tafelzeichnung als Vektordaten an den Server; erneutes Teilen ersetzt
-//           die vorige Abgabe dieses Geräts.
-// Lehrer:   /lehrer (PIN) – Leiste mit allen Abgaben, live per WebSocket, und QR-Code für die Schüler.
-//           Eine Abgabe öffnet sich auf der Tafel als Arbeitskopie: Ergänzen und Radieren bleiben nur hier,
-//           das Original auf dem Server bleibt unverändert („Original wiederherstellen“).
-// Ohne Server (GitHub Pages, lokaler Testserver) bleibt das alles ausgeblendet.
+//           die vorige Abgabe dieses Geräts. Nur mit Raumcode in der Adresse (?raum=…, steht im QR-Code).
+// Lehrer:   ?lehrer (PIN) – erzeugt einen zufälligen Raumcode und zeigt alle Abgaben dieses Raums live (WebSocket)
+//           mit QR-Code für die Schüler. Eine Abgabe öffnet sich auf der Tafel als Arbeitskopie: Ergänzen und
+//           Radieren bleiben nur hier, das Original auf dem Server bleibt unverändert („Original wiederherstellen“).
+// Welcher Server: kommt die Seite vom Abgabe-Server selbst (lokal auf dem Laptop, Cloudflare Tunnel), dieser;
+// sonst ?server=… oder ABGABE_SERVER aus config.js (GitHub Pages → Server im Internet per HTTPS/WSS).
+// Ohne erreichbaren Server bleibt das alles ausgeblendet.
 // Nachrichten über den WebSocket: siehe Beschreibung in server/server.js.
 // ------------------------------------------------------------------
 import { packen, entpacken, zeichneAlle, GRENZEN } from './striche.js';
@@ -15,11 +17,14 @@ import {
   oeffneTafel, schliesseTafel, mitRueckfrage,
 } from './tafel.js';
 import { setLinkUrl, qrSvg, showLink } from './link.js';
+import { ABGABE_SERVER } from './config.js';
 
 const $ = id => document.getElementById(id);
 const parameter = new URLSearchParams(location.search);
-const raum = (parameter.get('raum') ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20);
-const mitRaum = weg => weg + (raum ? (weg.includes('?') ? '&' : '?') + 'raum=' + raum : '');
+const serverParameter = parameter.get('server');
+let raum = (parameter.get('raum') ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20);
+let basis = null;          // Adresse des Abgabe-Servers, z. B. 'https://49-12-34-56.sslip.io'
+let eigenerServer = false; // Seite kommt vom Abgabe-Server selbst
 
 function speicher(schluessel, wert) {
   try {
@@ -29,8 +34,16 @@ function speicher(schluessel, wert) {
   return null;
 }
 
+function sitzung(schluessel, wert) {
+  try {
+    if (wert === undefined) return sessionStorage.getItem(schluessel);
+    if (wert === null) sessionStorage.removeItem(schluessel); else sessionStorage.setItem(schluessel, wert);
+  } catch { /* privates Fenster o. Ä. */ }
+  return null;
+}
+
 async function anfrage(weg, optionen = {}) {
-  const antwort = await fetch(weg, {
+  const antwort = await fetch(basis + weg, {
     cache: 'no-store',
     ...optionen,
     headers: optionen.body ? { 'Content-Type': 'application/json' } : undefined,
@@ -40,15 +53,32 @@ async function anfrage(weg, optionen = {}) {
   return daten;
 }
 
-// Läuft die Seite über den Abgabe-Server? (GitHub Pages ist HTTPS und hat keinen – dann gar nicht erst fragen)
-async function serverStatus() {
-  if (location.protocol !== 'http:') return null;
+async function istAbgabeServer(kandidat) {
   try {
-    const status = await anfrage('/api/status', { signal: AbortSignal.timeout(10000) });
-    return status.server === 'leiterschaukel-abgabe' ? status : null;
+    const antwort = await fetch(kandidat + '/api/status', { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+    return (await antwort.json()).server === 'leiterschaukel-abgabe';
+  } catch {
+    return false;
+  }
+}
+
+// Abgabe-Server suchen: zuerst die eigene Seite (außer auf GitHub Pages), dann ?server=… bzw. ABGABE_SERVER
+async function serverFinden() {
+  if (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io')
+    && await istAbgabeServer(location.origin)) {
+    eigenerServer = true;
+    return location.origin;
+  }
+  const kandidat = (serverParameter || ABGABE_SERVER).replace(/\/+$/, '');
+  if (!kandidat) return null;
+  try {
+    const url = new URL(kandidat);
+    // von einer HTTPS-Seite aus nur HTTPS (sonst blockiert der Browser ohnehin)
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && location.protocol === 'http:')) return null;
   } catch {
     return null;
   }
+  return await istAbgabeServer(kandidat) ? kandidat : null;
 }
 
 // WebSocket zum Server, der sich nach einer Unterbrechung (WLAN weg, Laptop zugeklappt) selbst neu verbindet
@@ -59,7 +89,7 @@ class Leitung {
   }
 
   verbinden() {
-    const ws = new WebSocket(`ws://${location.host}/ws`);
+    const ws = new WebSocket(basis.replace(/^http/, 'ws') + '/ws');
     this.ws = ws;
     ws.onopen = () => {
       this.warten = 1000;
@@ -87,13 +117,29 @@ class Leitung {
 }
 
 export async function initAbgabe() {
-  const status = await serverStatus();
-  if (!status) return;
+  basis = await serverFinden();
+  if (!basis) return;
   if (parameter.has('lehrer')) {
-    if (status.lehrer) starteLehrer(); else zeigePinDialog();
-  } else {
+    lehrerRaum();
+    if (sitzung(tokenSchluessel())) starteLehrer(); else zeigePinDialog();
+  } else if (raum) {
     starteSchueler();
   }
+}
+
+// Adresse für die Schüler (bzw. mit lehrer = true für die Lehrerseite auf einem zweiten Gerät, gleicher Raum):
+// kommt die Seite vom Laptop selbst (localhost), dessen Adresse im WLAN; sonst dieselbe Seite (GitHub Pages,
+// Tunnel, Hetzner) – jeweils mit Raumcode
+function schuelerUrl(adressen = [], port = 0, lehrer = false) {
+  let url;
+  if (eigenerServer && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+    url = adressen.length ? `http://${adressen[0]}:${port}/` : location.origin + '/';
+  } else {
+    url = location.origin + location.pathname;
+  }
+  url += (lehrer ? '?lehrer&raum=' : '?raum=') + raum;
+  if (!eigenerServer && serverParameter) url += '&server=' + encodeURIComponent(serverParameter);
+  return url;
 }
 
 // ================= Schüler
@@ -108,7 +154,7 @@ function geraeteId() {
 }
 
 function starteSchueler() {
-  if (raum) setLinkUrl(location.origin + '/?raum=' + raum);
+  setLinkUrl(schuelerUrl());
   $('tafelSchueler').hidden = false;
   const name = $('tafelName');
   name.maxLength = GRENZEN.NAME;
@@ -129,7 +175,7 @@ function starteSchueler() {
     if (nachricht.typ === 'geteilt') melde('Geteilt ✓', true);
     if (nachricht.typ === 'fehler') melde(nachricht.text, false);
   });
-  const KEINE_VERBINDUNG = 'Keine Verbindung zum Lehrer-Laptop – bitte gleich noch einmal versuchen.';
+  const KEINE_VERBINDUNG = 'Keine Verbindung zum Server – bitte gleich noch einmal versuchen.';
   knopf.addEventListener('click', () => {
     const gesendet = leitung.senden({ typ: 'abgabe', name: name.value.trim(), striche: packen(eigenesDokument.striche) });
     if (!gesendet) return melde(KEINE_VERBINDUNG, false);
@@ -139,6 +185,20 @@ function starteSchueler() {
 }
 
 // ================= Lehrer
+
+// Raumcode: aus der Adresse oder neu und zufällig (4 Zeichen ohne verwechselbare wie l/1, o/0); er wird in die
+// Adresse geschrieben, damit Neuladen im selben Raum bleibt
+function lehrerRaum() {
+  if (!/^[a-z0-9-]{3,20}$/.test(raum)) {
+    const zeichen = 'abcdefghjkmnpqrstuvwxyz23456789';
+    raum = Array.from(crypto.getRandomValues(new Uint8Array(4)), b => zeichen[b % zeichen.length]).join('');
+  }
+  const url = new URL(location.href);
+  url.searchParams.set('raum', raum);
+  history.replaceState(null, '', url);
+}
+
+const tokenSchluessel = () => 'leiterschaukel-lehrer|' + basis;
 
 function zeigePinDialog(meldung = '') {
   $('pinOverlay').hidden = false;
@@ -150,7 +210,8 @@ function zeigePinDialog(meldung = '') {
 $('pinForm').addEventListener('submit', async event => {
   event.preventDefault();
   try {
-    await anfrage('/api/login', { method: 'POST', body: JSON.stringify({ pin: $('pinInput').value.trim() }) });
+    const { token } = await anfrage('/api/login', { method: 'POST', body: JSON.stringify({ pin: $('pinInput').value.trim() }) });
+    sitzung(tokenSchluessel(), token);
     $('pinOverlay').hidden = true;
     starteLehrer();
   } catch (fehler) {
@@ -171,8 +232,12 @@ async function starteLehrer() {
   eigeneKachel();
   zeigeTitel();
 
-  $('abgabenRaum').textContent = raum ? 'Raum ' + raum : '';
-  $('abgabenQr').addEventListener('click', showLink);
+  $('abgabenRaum').textContent = 'Raumcode: ' + raum;
+  $('abgabenQr').addEventListener('click', () => showLink());
+  // Lehrerseite auf dem iPad o. Ä.: nur auf Knopfdruck, damit die Schüler den Code am Beamer nicht mitscannen
+  $('abgabenLehrerQr').addEventListener('click', () => showLink(schuelerUrl(netz.adressen, netz.port, true),
+    'Lehrerseite – nur für die Lehrkraft. Mit einem eigenen Gerät (z. B. iPad) scannen, dort die PIN eingeben; '
+    + 'das Gerät kommt in denselben Raum.'));
   $('abgabenGross').addEventListener('click', () => {
     const gross = $('abgaben').classList.toggle('gross');
     $('abgabenGross').textContent = gross ? 'Verkleinern' : 'Groß';
@@ -206,7 +271,7 @@ async function starteLehrer() {
 let leitung = null;
 function verbinden() {
   if (leitung) leitung.aus = true;
-  leitung = new Leitung({ typ: 'hallo', rolle: 'lehrer', raum }, nachricht => {
+  leitung = new Leitung({ typ: 'hallo', rolle: 'lehrer', raum, token: sitzung(tokenSchluessel()) }, nachricht => {
     if (nachricht.typ === 'willkommen') adresseZeigen(nachricht);
     if (nachricht.typ === 'liste') {
       const ids = new Set(nachricht.abgaben.map(a => a.id));
@@ -217,24 +282,28 @@ function verbinden() {
     if (nachricht.typ === 'geloescht') entfernen(nachricht.id);
     if (nachricht.typ === 'geleert') for (const id of [...abgaben.keys()]) entfernen(id);
     if (nachricht.typ === 'online') $('abgabenOnline').textContent = `${nachricht.anzahl} Gerät${nachricht.anzahl === 1 ? '' : 'e'} verbunden`;
-    // Server neu gestartet: Anmeldung ist ungültig → PIN erneut abfragen
+    // Anmeldung abgelaufen oder Server neu gestartet → PIN erneut abfragen
     if (nachricht.typ === 'fehler' && nachricht.code === 'pin') {
-      zeigePinDialog('Der Server wurde neu gestartet – bitte PIN erneut eingeben.');
+      sitzung(tokenSchluessel(), null);
+      zeigePinDialog('Anmeldung abgelaufen oder Server neu gestartet – bitte PIN erneut eingeben.');
     }
+    if (nachricht.typ === 'fehler' && nachricht.code !== 'pin') $('abgabenOnline').textContent = nachricht.text;
   }, offen => {
     if (!offen) $('abgabenOnline').textContent = 'Verbindung zum Server unterbrochen …';
   });
 }
 
-// Adresse und QR-Code für die Schüler (Adresse des Laptops im lokalen Netz)
+// Adresse und QR-Code für die Schüler
 let adresseGezeigt = false;
+const netz = { adressen: [], port: 0 };   // Adressen des Laptops im WLAN (lokaler Betrieb)
 async function adresseZeigen({ adressen, port }) {
+  Object.assign(netz, { adressen, port });
   if (adresseGezeigt) return;
   adresseGezeigt = true;
-  const url = mitRaum(adressen.length ? `http://${adressen[0]}:${port}/` : location.origin + '/');
+  const url = schuelerUrl(adressen, port);
   setLinkUrl(url);
-  $('abgabenAdresse').textContent = url.replace(/^http:\/\//, '');
-  $('abgabenAdresse').title = adressen.length > 1
+  $('abgabenAdresse').textContent = url.replace(/^https?:\/\//, '');
+  $('abgabenAdresse').title = eigenerServer && adressen.length > 1
     ? 'Weitere Adressen des Laptops: ' + adressen.slice(1).map(a => `${a}:${port}`).join(', ') : '';
   try {
     $('abgabenQrBild').innerHTML = await qrSvg(url);

@@ -116,6 +116,21 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
   Die Kraft auf das Elektron zeigt entgegengesetzt zum Mittelfinger.
 - Beim Magneten auf dem Tisch zählt die Bewegung des Leiters relativ zum Magneten (Schulmodell).
 
+## Laserpointer
+
+Der Knopf **„Laserpointer“** (oben im Bedienfeld rechts und in der Werkzeugleiste der großen Tafel, am Laptop auch
+die Taste **L**) schaltet einen Zeigestift ein: Mit **Apple Pencil oder Maus** markiert man Stellen, um zu zeigen,
+wovon man gerade spricht. Die Spur leuchtet rot über allem und verblasst etwa 1,5 Sekunden nach dem Absetzen; an
+der Simulation und an der Tafel ändert sich nichts.
+
+- Solange der Laser an ist, bedienen Stift und Maus die Simulation nicht (kein Drehen der Ansicht, kein Ziehen der
+  Schaukel, kein Schreiben auf der Tafel). **Finger** funktionieren weiter wie gewohnt – mit einer Hand bedienen,
+  mit dem Stift zeigen.
+- Knöpfe, Regler und Eingabefelder lassen sich auch mit Stift oder Maus weiter bedienen, z. B. um den Laser wieder
+  auszuschalten.
+- Die Markierung ist nur auf dem eigenen Gerät zu sehen (für die Klasse: iPad per AirPlay/Kabel auf den Beamer
+  spiegeln). Läuft vollständig im Browser, also auch auf GitHub Pages ohne Abgabe-Server.
+
 ## Link zeigen
 
 Der Knopf „Link / QR-Code zeigen“ (ganz oben im Bedienfeld rechts) öffnet ein großes Fenster mit QR-Code und Adresse der Simulation zum
@@ -127,126 +142,195 @@ Internet geladen.
 
 ## Abgabe im Unterricht (Abgabe-Server)
 
-Schüler zeichnen auf der Tafel und schicken ihre Zeichnung mit **„Teilen“** an den Lehrer-Laptop. Die Lehrerseite
+Schüler zeichnen auf der Tafel und schicken ihre Zeichnung mit **„Teilen“** an die Lehrkraft. Die Lehrerseite
 zeigt alle Abgaben live; ein Klick öffnet eine Abgabe groß auf der Tafel.
 
-Dafür läuft auf dem Laptop ein kleiner Node.js-Server, der **die Simulation selbst mit ausliefert** – Schüler und
-Lehrer öffnen alles über `http://<Laptop-IP>:8080`. (Die GitHub-Pages-Seite läuft über HTTPS und dürfte einen
-unverschlüsselten Server im lokalen Netz gar nicht ansprechen.) Die GitHub-Pages-Version funktioniert weiter
-wie bisher; ohne Server ist der Knopf „Teilen“ einfach ausgeblendet.
+Dafür gibt es einen kleinen Node.js-Server (`server/`, ohne weitere Abhängigkeiten). Er läuft wahlweise
 
-### Installation (einmalig)
+- **im Internet** (empfohlen): Die Simulation bleibt auf GitHub Pages und verbindet sich per HTTPS/WebSocket (WSS)
+  mit dem Server. Schüler können aus jedem Netz mitmachen (Schul-WLAN, Mobilfunk).
+- **lokal auf dem Laptop** (Ausweichlösung ohne Internet): Der Server liefert die Simulation selbst mit aus,
+  alle öffnen `http://<Laptop-IP>:8080`.
 
-```bash
-sudo dnf install nodejs        # Node.js ab Version 18; prüfen mit: node --version
-```
-
-Weitere Pakete sind nicht nötig (kein `npm install`). Optional, solange Internet da ist:
-
-```bash
-npm run offline                # lädt three.js und die QR-Code-Bibliothek nach server/offline/ (ca. 1,4 MB)
-```
-
-Dann liefert der Server diese Bibliotheken selbst aus, und die Simulation läuft auch in einem Netz **ohne
-Internet** (z. B. im Hotspot des Laptops). Ohne diesen Schritt holen die Geräte three.js wie bisher aus dem Internet.
-
-### Start
-
-Im Ordner `leiterschaukel-induktion`:
-
-```bash
-npm start
-```
-
-Die Konsole zeigt die Adresse für die Schüler, die Lehrerseite und die **PIN**, z. B.:
-
-```text
-  Schüler:  http://192.168.2.51:8080/
-  Lehrer:   http://localhost:8080/lehrer      PIN: 483920
-```
-
-Eigene PIN oder anderer Port: `PIN=2468 PORT=8090 npm start`. Beenden mit **Strg+C** – dabei sind alle Abgaben weg.
+Ohne erreichbaren Server ist „Teilen“ ausgeblendet; die Simulation funktioniert wie bisher.
 
 ### Ablauf in der Stunde
 
-1. Lehrer-Laptop: `http://localhost:8080/lehrer` öffnen, PIN eingeben. Unten erscheint die Leiste **„Abgaben“** mit
-   Adresse und QR-Code (Klick auf „Groß“ zeigt den QR-Code groß und alle Abgaben als Raster; „Link / QR-Code
-   zeigen“ zeigt jetzt ebenfalls die Schüleradresse).
-2. Schüler scannen den QR-Code, öffnen „Erklärung: Elektron im Leiter“, tippen auf die Tafel und zeichnen.
-   Optional Name/Kürzel eintragen, dann **„Teilen“** → „Geteilt ✓“. Erneutes Teilen ersetzt die vorige Abgabe
-   dieses Geräts.
+1. Lehrerseite öffnen: `https://marco230199.github.io/leiterschaukel-induktion/?lehrer` (lokal:
+   `http://localhost:8080/lehrer`), PIN eingeben. Die Seite erzeugt einen zufälligen **Raumcode** (z. B. `k7m2`)
+   und schreibt ihn in die Adresse – Neuladen bleibt im selben Raum, die Anmeldung gilt in diesem Tab weiter
+   (bis zu 12 Stunden bzw. bis zum Neustart des Servers). Unten erscheint die Leiste **„Abgaben“** mit Raumcode,
+   Adresse und QR-Code („Groß“ zeigt den QR-Code groß und alle Abgaben als Raster).
+2. Schüler scannen den QR-Code (er enthält den Raumcode), öffnen „Erklärung: Elektron im Leiter“, tippen auf die
+   Tafel und zeichnen. Optional Name/Kürzel, dann **„Teilen“** → „Geteilt ✓“. Erneutes Teilen ersetzt die vorige
+   Abgabe dieses Geräts. Ohne Raumcode in der Adresse gibt es keinen „Teilen“-Knopf.
 3. Neue Abgaben erscheinen in der Leiste ohne Neuladen (kurz grün umrandet). Ein Klick öffnet die Abgabe auf der
-   Tafel; die kleine Tafel in der Szene zeigt dann ebenfalls diese Abgabe, Antippen öffnet sie wieder.
-4. Die geöffnete Abgabe lässt sich mit denselben Werkzeugen ergänzen und radieren. Das ist **nur eine Arbeitskopie
-   auf dem Lehrer-Laptop**: Der Schüler sieht nichts davon, das Original bleibt erhalten. „Original
-   wiederherstellen“ verwirft die Änderungen. Teilt der Schüler erneut, während die Kopie bearbeitet ist, steht
-   „neue Version eingegangen“ im Titel – „Original wiederherstellen“ lädt sie.
+   Tafel; die kleine Tafel in der Szene zeigt dann ebenfalls diese Abgabe.
+4. Die geöffnete Abgabe lässt sich mit denselben Werkzeugen ergänzen und radieren – nur als **Arbeitskopie auf dem
+   Lehrergerät**: Der Schüler sieht nichts davon, das Original bleibt erhalten. „Original wiederherstellen“
+   verwirft die Änderungen. Teilt der Schüler erneut, während die Kopie bearbeitet ist, steht „neue Version
+   eingegangen“ im Titel – „Original wiederherstellen“ lädt sie.
 5. „Abgabe löschen“ (in der Tafel) bzw. „Alle löschen“ (in der Leiste) fragen einmal nach („Wirklich …?“).
    „Eigene Tafel“ in der Leiste führt zurück zur eigenen Zeichnung.
 
-**Mehrere Klassen gleichzeitig:** Raumcode an die Lehreradresse hängen, z. B. `http://localhost:8080/lehrer?raum=10b`.
-Der QR-Code enthält den Raum dann automatisch; jede Lehrerseite sieht nur die Abgaben ihres Raums.
+**Lehrerseite zusätzlich auf dem iPad:** „Lehrerseite auf anderem Gerät“ in der Leiste zeigt einen QR-Code zur
+Lehrerseite – mit demselben Raumcode. Mit dem iPad scannen, PIN eingeben: Beide Geräte sehen dieselben Abgaben live;
+Bearbeitungen bleiben auf dem jeweiligen Gerät. Der Code erscheint nur auf Knopfdruck, damit ihn die Schüler am
+Beamer nicht nebenbei mitscannen (ohne PIN kämen sie ohnehin nicht weiter).
 
-### Firewall freigeben (Fedora, firewalld)
+Mehrere Klassen gleichzeitig: Jede neu geöffnete Lehrerseite bekommt ihren eigenen Raumcode und sieht nur dessen
+Abgaben. Einen festen Code kann man mit `?lehrer&raum=10b` wählen.
 
-Auf Fedora Workstation sind in der Standardzone die Ports 1025–65535 meist schon offen. Prüfen:
+### Server im Internet: Hetzner Cloud (Deutschland)
 
-```bash
-firewall-cmd --get-active-zones          # welche Zone hat das WLAN?
-firewall-cmd --list-all                  # Port 8080 bzw. 1025-65535 unter „ports“?
+Vorschlag: der kleinste Cloud-Server bei **Hetzner** (deutscher Anbieter, Rechenzentren in Nürnberg und
+Falkenstein, Abrechnung stundengenau, um 4–5 € im Monat – aktuellen Preis auf hetzner.com prüfen). Caddy besorgt
+das HTTPS-Zertifikat automatisch. Als Adresse dient vorerst kostenlos `<IP-mit-Strichen>.sslip.io`
+(z. B. `49-12-34-56.sslip.io` zeigt auf 49.12.34.56); später lässt sich eine eigene Domain eintragen.
+
+**Voraussetzung:** Die Änderungen sind auf GitHub gepusht (der Server holt sich den Code von dort).
+
+1. **Konto** auf <https://console.hetzner.cloud> anlegen (mit Identitätsprüfung und Zahlungsmittel).
+   Unter „Auftragsverarbeitung“ im Konto den **AVV** abschließen (für den Datenschutz an der Schule).
+2. **SSH-Schlüssel** auf dem Laptop erzeugen (falls noch keiner da ist) und anzeigen:
+
+   ```bash
+   ssh-keygen -t ed25519          # Enter für die Vorgaben, Passphrase nach Wunsch
+   cat ~/.ssh/id_ed25519.pub      # diese Zeile gleich bei Hetzner einfügen
+   ```
+
+3. **Server anlegen** (Projekt → „Server hinzufügen“): Standort Nürnberg oder Falkenstein, Image **Ubuntu 24.04**,
+   Typ: der günstigste mit gemeinsamer vCPU (x86), Netzwerk: **öffentliche IPv4** angehakt, SSH-Schlüssel
+   einfügen, Name z. B. `abgabe`. Nach dem Erstellen die IPv4-Adresse notieren.
+4. **Einrichten** – auf dem Laptop:
+
+   ```bash
+   ssh root@49.12.34.56           # eigene IP; die Frage nach dem Fingerabdruck mit „yes“ beantworten
+   ```
+
+   und dann auf dem Server:
+
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/marco230199/leiterschaukel-induktion/master/server/deploy/einrichten.sh -o einrichten.sh
+   bash einrichten.sh
+   ```
+
+   Das Skript installiert Node.js, Caddy und git, holt den Code nach `/opt/leiterschaukel`, richtet den Dienst
+   und die Firewall (nur SSH, HTTP, HTTPS) ein und zeigt am Ende **Server-Adresse und PIN** an.
+5. **Prüfen:** `https://49-12-34-56.sslip.io/api/status` im Browser öffnen → `{"server":"leiterschaukel-abgabe",…}`.
+   (Das erste Zertifikat kann ein paar Sekunden dauern.)
+6. **Simulation verbinden:** in `js/config.js` die Adresse eintragen, committen und pushen:
+
+   ```js
+   export const ABGABE_SERVER = 'https://49-12-34-56.sslip.io';
+   ```
+
+   Sobald GitHub Pages aktualisiert ist (1–2 Minuten), zeigt die Simulation auf GitHub Pages den Knopf „Teilen“,
+   wenn sie mit Raumcode geöffnet wird.
+
+**Später nützlich** (per `ssh root@<IP>`):
+
+| Was | Befehl |
+| --- | --- |
+| Code aktualisieren (löscht laufende Abgaben!) | `bash /opt/leiterschaukel/server/deploy/einrichten.sh` |
+| PIN ändern | `nano /etc/leiterschaukel-abgabe.env`, dann `systemctl restart leiterschaukel-abgabe` |
+| Läuft der Dienst? / Meldungen | `systemctl status leiterschaukel-abgabe` / `journalctl -u leiterschaukel-abgabe` |
+| Eigene Domain statt sslip.io | DNS-Eintrag (A) auf die IP, dann `bash einrichten.sh abgabe.meine-domain.de` und `ABGABE_SERVER` anpassen |
+
+Sicherheitsupdates von Ubuntu spielt `unattended-upgrades` automatisch ein. Braucht man den Server nicht mehr,
+in der Hetzner-Konsole löschen – erst dann fallen keine Kosten mehr an.
+
+### Erster Test aus dem Internet: Server auf dem Laptop + Cloudflare Tunnel
+
+Ein Cloudflare Tunnel macht den Server auf dem Laptop ohne Konto, ohne Firewall-Änderung und ohne Push unter einer
+zufälligen HTTPS-Adresse erreichbar – auch fürs iPad im Mobilfunknetz. Cloudflare ist ein US-Anbieter: **nur zum
+Testen**, nicht mit echten Schülerdaten.
+
+1. `cloudflared` einmalig installieren:
+
+   ```bash
+   mkdir -p ~/.local/bin
+   curl -fsSL -o ~/.local/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+   chmod +x ~/.local/bin/cloudflared
+   ```
+
+2. Server starten (Terminal 1, im Ordner `leiterschaukel-induktion`): `npm start` – PIN notieren.
+3. Tunnel starten (Terminal 2):
+
+   ```bash
+   cloudflared tunnel --url http://localhost:8080
+   ```
+
+   Nach einigen Sekunden steht dort eine Adresse wie `https://ruhig-blau-fisch.trycloudflare.com`.
+4. Am Laptop `https://ruhig-blau-fisch.trycloudflare.com/lehrer` öffnen, PIN eingeben. Der QR-Code zeigt jetzt auf
+   die Tunnel-Adresse (mit Raumcode).
+5. iPad (z. B. WLAN aus, nur Mobilfunk): QR-Code scannen, zeichnen, teilen – die Abgabe erscheint am Laptop.
+
+**Mit der echten GitHub-Pages-Seite testen** (nachdem die Änderungen gepusht sind): Die Serveradresse lässt sich
+an die Seitenadresse hängen, ohne `config.js` zu ändern:
+
+```text
+https://marco230199.github.io/leiterschaukel-induktion/?lehrer&server=https://ruhig-blau-fisch.trycloudflare.com
 ```
 
-Falls nicht freigegeben:
+Der QR-Code der Lehrerseite enthält den `server`-Zusatz dann ebenfalls. Die Tunnel-Adresse ändert sich bei jedem
+Start von `cloudflared`. Beenden: in beiden Terminals Strg+C.
+
+### Lokaler Betrieb auf dem Laptop (ohne Internet)
 
 ```bash
-sudo firewall-cmd --add-port=8080/tcp                                         # bis zum Neustart
+sudo dnf install nodejs        # einmalig; Node.js ab Version 18
+npm run offline                # einmalig, solange Internet da ist: three.js & QR-Code-Bibliothek nach server/offline/
+npm start                      # Lehrerseite: http://localhost:8080/lehrer
+```
+
+Der QR-Code zeigt dann auf die Adresse des Laptops im WLAN (z. B. `http://192.168.2.51:8080/?raum=k7m2`). Ohne
+`npm run offline` holen die Geräte three.js weiter aus dem Internet. Eigene PIN oder anderer Port:
+`PIN=2468 PORT=8090 npm start`. Beenden mit Strg+C – dabei sind alle Abgaben weg.
+
+**Firewall (Fedora, firewalld):** Auf Fedora Workstation sind in der Standardzone die Ports 1025–65535 meist schon
+offen (`firewall-cmd --list-all`). Sonst:
+
+```bash
+sudo firewall-cmd --add-port=8080/tcp                                            # bis zum Neustart
 sudo firewall-cmd --permanent --add-port=8080/tcp && sudo firewall-cmd --reload  # dauerhaft
-sudo firewall-cmd --permanent --remove-port=8080/tcp && sudo firewall-cmd --reload  # wieder schließen
 ```
 
-Liegt das WLAN in einer anderen Zone als der Standardzone, `--zone=<Zone>` ergänzen (beim Laptop-Hotspot heißt sie
-meist `nm-shared`: `sudo firewall-cmd --zone=nm-shared --add-port=8080/tcp`).
+Liegt das WLAN in einer anderen Zone (`firewall-cmd --get-active-zones`), `--zone=<Zone>` ergänzen; beim
+Laptop-Hotspot heißt sie meist `nm-shared`.
 
-### Wenn das Schul-WLAN die Geräte voneinander isoliert
-
-Viele Schul- und Gäste-WLANs lassen Geräte nicht miteinander sprechen („Client-Isolation“). Erkennbar daran, dass
-die Schülergeräte die Adresse nicht öffnen können, obwohl die Firewall offen ist. Auswege:
-
-- **Hotspot vom Laptop:** GNOME-Einstellungen → WLAN → Menü ⋮ → „WLAN-Hotspot einschalten …“ oder im Terminal
-  `nmcli device wifi hotspot ssid Physik password 'geheim123'`. Die Laptop-Adresse ist dann meist `10.42.0.1`;
-  der Server zeigt sie beim Start bzw. auf der Lehrerseite an (Server erst **nach** dem Einschalten des Hotspots
-  starten oder Lehrerseite neu laden). Der Laptop ist dabei meist nicht mehr im Internet → vorher
-  `npm run offline` ausführen. Firewall-Zone siehe oben (`nm-shared`).
-- **Hotspot vom Handy:** Laptop und Schülergeräte ins Handy-WLAN – dann haben alle auch Internet.
-- **Schul-IT fragen** nach einem Netz ohne Client-Isolation (z. B. ein Lehrer- oder Präsentations-WLAN).
-
-### Kurzer Testablauf (Laptop + iPad)
-
-1. Laptop: `npm start`, dann `http://localhost:8080/lehrer` öffnen, PIN eingeben.
-2. iPad im selben WLAN: QR-Code aus der Leiste scannen (Safari).
-3. iPad: „Erklärung: Elektron im Leiter“ → Tafel antippen → mit dem Pencil einen Pfeil zeichnen; die Handfläche
-   darf dabei aufliegen. Strichbreite folgt dem Druck, die Seite scrollt nicht.
-4. Name eintragen, „Teilen“ → „Geteilt ✓“. Auf dem Laptop erscheint die Abgabe sofort in der Leiste.
-5. Laptop: Abgabe anklicken, etwas ergänzen und radieren → Titel „(bearbeitet)“. Auf dem iPad ändert sich nichts.
-   „Original wiederherstellen“ zeigt wieder genau die Schülerzeichnung.
-6. iPad: weiterzeichnen, erneut „Teilen“ → auf dem Laptop bleibt es eine Kachel, mit neuem Inhalt.
+**Wenn das WLAN die Geräte voneinander isoliert** (Schüler erreichen die Laptop-Adresse nicht): Hotspot vom Laptop
+(GNOME-Einstellungen → WLAN → ⋮ → „WLAN-Hotspot einschalten …“ oder
+`nmcli device wifi hotspot ssid Physik password 'geheim123'`; Server danach starten bzw. Lehrerseite neu laden),
+Hotspot vom Handy für alle Geräte, oder die Schul-IT nach einem Netz ohne Client-Isolation fragen – oder gleich
+den Server im Internet nutzen.
 
 ### Datenschutz und Schutzmaßnahmen
 
-- Abgaben liegen **nur im Arbeitsspeicher** des Servers; nichts wird auf die Festplatte geschrieben, es gibt keine
-  Accounts und keine externen Dienste. Beim Beenden des Servers ist alles weg. (Die eigene Zeichnung und der Name
-  bleiben nur im Browser des jeweiligen Geräts gespeichert.)
-- Lehrerseite, Abgabenliste und Löschen nur nach PIN (zufällig beim Start oder per `PIN=…`); nach der Anmeldung
-  merkt sich der Browser das per Cookie, bis der Server neu startet. Höchstens 5 PIN-Versuche pro Minute und Gerät.
-- Pro Abgabe höchstens 1,5 MB, 1500 Striche und 60 000 Punkte; höchstens 6 Abgaben pro Minute je Gerät und je
-  IP-Adresse; höchstens 150 Abgaben pro Raum und 20 Räume.
-- Der Server liefert nur die Dateien der Simulation aus (nicht `server/`, `tests/` oder versteckte Dateien).
+- Abgaben liegen **nur im Arbeitsspeicher** des Servers; nichts wird auf die Festplatte geschrieben, keine Accounts,
+  keine Zugriffsprotokolle (Caddy ist so eingestellt, der Node-Server protokolliert nur Fehler). Beim Neustart des
+  Servers ist alles weg; verwaiste Räume werden nach 12 Stunden gelöscht. Eigene Zeichnung, Name und eine zufällige
+  Geräte-Kennung bleiben nur im Browser des jeweiligen Geräts.
+- Empfehlung: Kürzel statt vollständiger Namen. Für den Einsatz mit Klassen den AVV mit Hetzner abschließen und den
+  Einsatz mit der bzw. dem Datenschutzbeauftragten der Schule abstimmen.
+- **CORS/Herkunft:** Nur `https://marco230199.github.io` und Seiten, die vom Server selbst kommen (lokaler Betrieb,
+  Tunnel), dürfen den Server aus dem Browser nutzen – auch für den WebSocket, für den der Browser selbst kein CORS
+  prüft. Weitere Seiten: Umgebungsvariable `ERLAUBTE_HERKUNFT` (durch Komma getrennt). Das hält fremde Webseiten
+  ab, aber keine Skripte, die ihre Herkunft fälschen – dafür sind die folgenden Grenzen da.
+- Lehrerseite (Abgaben sehen, löschen) nur mit PIN; danach ein Token, das 12 Stunden gilt. Höchstens 5 PIN-Versuche
+  pro Minute je IP-Adresse und 60 falsche insgesamt pro Minute.
+- Abgeben nur in Räume, die eine angemeldete Lehrerseite geöffnet hat. Pro Abgabe höchstens 1,5 MB, 1500 Striche
+  und 60 000 Punkte; höchstens 6 Abgaben pro Minute je Gerät und je IP-Adresse (hinter Caddy bzw. dem Tunnel zählt
+  die echte Adresse des Geräts); höchstens 150 Abgaben pro Raum und 20 Räume.
 
 ### Technik
 
-- `server/server.js`: statische Dateien, Anmeldung (`POST /api/login`), Erkennung (`GET /api/status`) und ein
-  WebSocket unter `/ws` für alles Weitere. `server/websocket.js` ist ein minimaler WebSocket-Server nur mit
-  Node-Bordmitteln (RFC 6455, Textnachrichten). Die Nachrichten sind oben in `server.js` beschrieben.
+- `server/server.js`: Erkennung (`GET /api/status`), Anmeldung (`POST /api/login` → Token), WebSocket unter `/ws`
+  für alles Weitere (Nachrichten oben in der Datei beschrieben) und – für den lokalen Betrieb – die statischen
+  Dateien der Simulation. `server/websocket.js` ist ein minimaler WebSocket-Server nur mit Node-Bordmitteln.
+  `server/deploy/`: Einrichtungsskript, Systemdienst und Caddy-Konfiguration für den Server im Internet.
+- Welcher Server benutzt wird (`js/abgabe.js`): Kommt die Seite vom Abgabe-Server selbst, dieser; sonst `?server=…`
+  oder `ABGABE_SERVER` aus `js/config.js`.
 - Zeichnungen werden als **Vektordaten** übertragen (`js/striche.js`): Freihandstriche als Punkte mit Stiftdruck,
   Pfeile als Anfangs- und Endpunkt, jeweils mit Farbe. Koordinaten beziehen sich auf das Tafelbild (1600 × 1000).
   Dieselbe Datei prüft die Abgaben auf dem Server.
@@ -264,7 +348,7 @@ die Schülergeräte die Adresse nicht öffnen können, obwohl die Firewall offen
 Die Simulation lädt [three.js](https://threejs.org) aus dem Internet und muss über einen Webserver
 geöffnet werden (ein Doppelklick auf `index.html` reicht nicht):
 
-- **Mit Abgabe-Funktion:** `npm start` (siehe oben)
+- **Mit Abgabe-Funktion (lokal):** `npm start` (siehe oben)
 - **VS Code:** Erweiterung „Live Server“, Rechtsklick auf `index.html` → „Open with Live Server“
 - **Terminal:** im Projektordner `python3 -m http.server` ausführen und <http://localhost:8000> öffnen
 
@@ -276,9 +360,10 @@ leiterschaukel-induktion/
 ├── css/style.css
 ├── bilder/tafel.jpg    # Bild auf der Tafel (Leiter im Magnetfeld)
 ├── server/
-│   ├── server.js       # Abgabe-Server: liefert die Simulation aus, Abgaben per WebSocket (npm start)
+│   ├── server.js       # Abgabe-Server: Abgaben per WebSocket, im Internet oder lokal (npm start)
 │   ├── websocket.js    # minimaler WebSocket-Server ohne Abhängigkeiten
-│   └── offline.js      # lädt three.js & Co. für den Betrieb ohne Internet (npm run offline)
+│   ├── offline.js      # lädt three.js & Co. für den Betrieb ohne Internet (npm run offline)
+│   └── deploy/         # Server im Internet: einrichten.sh, Systemdienst, Caddyfile
 ├── js/
 │   ├── main.js         # Start und Render-Schleife
 │   ├── config.js       # Maße und Modellgrößen
@@ -286,6 +371,7 @@ leiterschaukel-induktion/
 │   ├── tafel.js        # Tafel in der Szene und großes Zeichenfenster (Pencil, Druck, Handballen)
 │   ├── striche.js      # Striche: Datenformat, Prüfung, Zeichnen (auch vom Server genutzt)
 │   ├── abgabe.js       # Teilen (Schüler) und Lehrerseite (Abgaben live, PIN, QR-Code)
+│   ├── laser.js        # Laserpointer: Stift/Maus markieren, Spur verblasst
 │   ├── physik.js       # Schaukel, Induktionsspannung, Strom, Bremskraft, Zeiger (ohne 3D, testbar)
 │   ├── szene.js        # Renderer, Kamera, Licht, Tisch
 │   ├── aufbau.js       # Stativ, Leiterschaukel, Hufeisenmagnet mit Drehgelenk

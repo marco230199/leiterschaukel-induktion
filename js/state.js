@@ -48,6 +48,9 @@ export const state = {
   // ---- Ansicht (Kamera; wird jedes Bild aus der Maus-/Fingersteuerung übernommen)
   view: { position: [0, 0, 0], target: [0, 0, 0] },
 
+  // ---- Laserpointer (laser.js): Stift und Maus markieren, statt die Simulation zu bedienen
+  laser: { on: false },
+
   // ---- Tafel im Erklärmodus
   tafel: {
     open: false,      // groß geöffnet

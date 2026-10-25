@@ -42,11 +42,13 @@ export async function qrSvg(url) {
   return qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
 }
 
-export async function showLink() {
-  const url = pageUrl();
+// url/hinweis: andere Adresse mit Erklärung zeigen (z. B. die Lehrerseite für ein zweites Gerät)
+export async function showLink(url = pageUrl(), hinweis = '') {
+  $('linkHinweis').textContent = hinweis;
+  $('linkHinweis').hidden = !hinweis;
   $('linkText').textContent = url.replace(/^https?:\/\//, '');
   $('linkText').href = url;
-  $('linkLocal').hidden = linkUrl !== null || !isLocal();
+  $('linkLocal').hidden = Boolean(hinweis) || linkUrl !== null || !isLocal();
   $('linkOverlay').hidden = false;
   $('linkClose').focus();
   const box = $('linkQr');
@@ -63,7 +65,7 @@ function hideLink() {
 }
 
 export function initLink() {
-  $('linkBtn').addEventListener('click', showLink);
+  $('linkBtn').addEventListener('click', () => showLink());
   $('linkClose').addEventListener('click', hideLink);
   // Klick neben das Fenster oder Escape schließt
   $('linkOverlay').addEventListener('click', event => {

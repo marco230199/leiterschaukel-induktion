@@ -334,3 +334,15 @@ body.lehrer .popup { max-height: calc(100% - 340px); }
   .abgaben { right: 16px; bottom: auto; top: 16px; z-index: 12; }
   .abgaben-kopf { width: 120px; }
 }
+/* Hinweis über dem QR-Code (z. B. „Lehrerseite – nur für die Lehrkraft“) */
+.link-hinweis { margin: 0; max-width: 32em; text-align: center; font-weight: 600; color: #c62828; }
+
+/* ---------------- Laserpointer */
+#laserCanvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 50; pointer-events: none; }
+body.laser-an, body.laser-an #scene canvas, body.laser-an #tafelCanvas { cursor: crosshair; }
+body.laser-an { -webkit-user-select: none; user-select: none; }
+.panel button.laser-btn { margin: 0 0 12px; border-color: #c62828; color: #c62828; font-weight: 600; }
+button.laser-btn[aria-pressed="true"],
+.panel button.laser-btn[aria-pressed="true"],
+.tafel-leiste button.laser-btn[aria-pressed="true"] { background: #c62828; border-color: #c62828; color: #fff; }
+.tafel-leiste button.laser-btn { color: #c62828; border-color: #c62828; }

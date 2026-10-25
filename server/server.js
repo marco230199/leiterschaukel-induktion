@@ -1,12 +1,21 @@
 // ------------------------------------------------------------------
-// Abgabe-Server für den Unterricht (läuft auf dem Lehrer-Laptop im Klassenzimmer)
+// Abgabe-Server für den Unterricht
 //
-// - liefert die Simulation selbst aus (statische Dateien aus diesem Repo), damit Schüler und Lehrer alles über
-//   http://<Laptop-IP>:<Port> öffnen – die GitHub-Pages-Seite (HTTPS) dürfte diesen Server nicht ansprechen
-// - nimmt Tafelzeichnungen der Schüler als Vektordaten an und meldet sie per WebSocket live an die Lehrerseite
-// - hält alles nur im Arbeitsspeicher; beim Beenden ist alles weg. Keine Abhängigkeiten außer Node.js (≥ 18).
+// Zwei Betriebsarten mit demselben Programm:
+// - im Internet (z. B. Hetzner hinter Caddy, siehe server/deploy/): Die Simulation bleibt auf GitHub Pages und
+//   verbindet sich per HTTPS/WSS mit diesem Server. Nur die erlaubten Herkünfte (ERLAUBTE_HERKUNFT) dürfen ihn nutzen.
+// - lokal auf dem Lehrer-Laptop: Der Server liefert die Simulation selbst mit aus (statische Dateien aus diesem
+//   Repo), Schüler und Lehrer öffnen alles über http://<Laptop-IP>:<Port>.
+// Zeichnungen der Schüler kommen als Vektordaten per WebSocket an und gehen live an die Lehrerseite.
+// Alles liegt nur im Arbeitsspeicher; beim Beenden ist alles weg. Keine Abhängigkeiten außer Node.js (≥ 18).
 //
-// Start:  npm start   bzw.  node server/server.js      Umgebungsvariablen: PORT (8080), PIN (sonst zufällig)
+// Start:  npm start   bzw.  node server/server.js
+// Umgebungsvariablen:
+//   PORT               Port (8080)
+//   HOST               Adresse, auf der der Server lauscht (0.0.0.0; hinter Caddy: 127.0.0.1)
+//   PIN                PIN der Lehrerseite (sonst zufällig, steht beim Start in der Konsole)
+//   ERLAUBTE_HERKUNFT  Webseiten, die den Server nutzen dürfen, durch Komma getrennt
+//                      (https://marco230199.github.io); Seiten vom Server selbst sind immer erlaubt
 // ------------------------------------------------------------------
 import http from 'node:http';
 import fs from 'node:fs';
@@ -18,7 +27,10 @@ import { pruefen, GRENZEN } from '../js/striche.js';
 import { annehmen } from './websocket.js';
 
 const PORT = Number(process.env.PORT) || 8080;
+const HOST = process.env.HOST || '0.0.0.0';
 const PIN = String(process.env.PIN || crypto.randomInt(100000, 1000000));
+const ERLAUBT = new Set((process.env.ERLAUBTE_HERKUNFT ?? 'https://marco230199.github.io')
+  .split(',').map(h => h.trim().replace(/\/+$/, '')).filter(Boolean));
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OFFLINE = path.join(ROOT, 'server', 'offline');   // optionale Kopie von three.js & Co. (npm run offline)
 const CDN = 'https://cdn.jsdelivr.net/npm/';
@@ -27,20 +39,25 @@ const LIMITS = {
   NACHRICHT: 1.5 * 1024 * 1024, // größte WebSocket-Nachricht (Abgabe) in Byte
   ABGABEN_PRO_MINUTE: 6,        // je Gerät und je IP-Adresse
   LOGINS_PRO_MINUTE: 5,         // PIN-Versuche je IP-Adresse
+  FEHLLOGINS_PRO_MINUTE: 60,    // falsche PINs insgesamt (gegen Raten von vielen Adressen aus)
   ABGABEN_PRO_RAUM: 150,
   RAEUME: 20,
+  RAUM_LEERLAUF: 12 * 3600_000, // Raum ohne Lehrerseite und ohne Aktivität wird nach 12 h gelöscht
+  ANMELDUNG: 12 * 3600_000,     // so lange gilt eine Anmeldung mit PIN
 };
 
 // ---------------- Speicher (nur im Arbeitsspeicher)
 
-const raeume = new Map();         // Raumcode → Map(Geräte-ID → { id, name, zeit, striche })
-const lehrerTokens = new Set();   // gültige Anmeldungen (Cookie)
+const raeume = new Map();         // Raumcode → { abgaben: Map(Geräte-ID → { id, name, zeit, striche }), zuletzt }
+const tokens = new Map();         // Anmeldung der Lehrerseite: Token → Ablaufzeit
 const verbindungen = new Set();   // offene WebSockets; jede mit rolle ('schueler' | 'lehrer'), raum, geraet
 
+// Raumcodes erzeugt die Lehrerseite (zufällig, z. B. „k7m2“); nur Räume einer angemeldeten Lehrerseite gibt es
+const RAUMCODE = /^[a-z0-9-]{3,20}$/;
 const raumCode = wert => String(wert ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20);
 
 function abgabenListe(raum) {
-  return [...(raeume.get(raum)?.values() ?? [])].sort((a, b) => a.zeit - b.zeit);
+  return [...(raeume.get(raum)?.abgaben.values() ?? [])].sort((a, b) => a.zeit - b.zeit);
 }
 
 // Nachricht an alle Lehrer-Verbindungen eines Raums
@@ -53,14 +70,24 @@ function onlineMelden(raum) {
   anLehrer(raum, { typ: 'online', anzahl });
 }
 
+// Aufräumen: abgelaufene Anmeldungen, verwaiste Räume
+setInterval(() => {
+  const jetzt = Date.now();
+  for (const [token, ablauf] of tokens) if (ablauf < jetzt) tokens.delete(token);
+  for (const [raum, r] of raeume) {
+    const lehrerDa = [...verbindungen].some(v => v.rolle === 'lehrer' && v.raum === raum);
+    if (!lehrerDa && jetzt - r.zuletzt > LIMITS.RAUM_LEERLAUF) raeume.delete(raum);
+  }
+}, 10 * 60_000).unref();
+
 // ---------------- Begrenzung: höchstens max Ereignisse je Schlüssel in der letzten Minute
 
 const zaehler = new Map();
-function zuViele(art, schluessel, max) {
+function zuViele(art, schluessel, max, zaehlen = true) {
   const key = art + '|' + schluessel, jetzt = Date.now();
   const zeiten = (zaehler.get(key) ?? []).filter(t => jetzt - t < 60_000);
   const voll = zeiten.length >= max;
-  if (!voll) zeiten.push(jetzt);
+  if (!voll && zaehlen) zeiten.push(jetzt);
   zaehler.set(key, zeiten);
   return voll;
 }
@@ -68,6 +95,34 @@ setInterval(() => {
   const jetzt = Date.now();
   for (const [key, zeiten] of zaehler) if (zeiten.every(t => jetzt - t >= 60_000)) zaehler.delete(key);
 }, 60_000).unref();
+
+// ---------------- Herkunft (CORS) und Adresse des Geräts
+
+// Erlaubt sind die eingestellten Seiten (GitHub Pages) und Seiten, die von diesem Server selbst kommen
+// (lokaler Betrieb, Cloudflare Tunnel). Ohne Origin-Kopf (kein Browser, z. B. curl) gibt es nichts zu prüfen –
+// gegen Skripte helfen nur PIN und Begrenzungen.
+function herkunftErlaubt(req) {
+  const herkunft = req.headers.origin;
+  if (!herkunft) return true;
+  if (ERLAUBT.has(herkunft)) return true;
+  try {
+    return new URL(herkunft).host === req.headers.host;
+  } catch {
+    return false;
+  }
+}
+
+// Kommt die Verbindung von einem Proxy auf demselben Rechner (Caddy, cloudflared), steht die echte Adresse des
+// Geräts als letzter Eintrag in X-Forwarded-For (den hängt der Proxy an; davor kann das Gerät selbst etwas
+// hineinschreiben). Von außen direkt kommende Verbindungen können so nichts vortäuschen.
+function ipVon(req) {
+  const direkt = req.socket.remoteAddress ?? '';
+  const weitergeleitet = req.headers['x-forwarded-for'];
+  if (weitergeleitet && /^(127\.|::1$|::ffff:127\.)/.test(direkt)) {
+    return String(weitergeleitet).split(',').at(-1).trim();
+  }
+  return direkt;
+}
 
 // ---------------- Hilfen
 
@@ -100,18 +155,13 @@ function lesen(req) {
   });
 }
 
-const ipVon = req => req.socket.remoteAddress ?? '';
-
-function istLehrer(req) {
-  const token = /(?:^|;\s*)lehrer=([0-9a-f]{64})/.exec(req.headers.cookie ?? '')?.[1];
-  return Boolean(token && lehrerTokens.has(token));
-}
-
 function pinStimmt(eingabe) {
   const a = crypto.createHash('sha256').update(String(eingabe ?? '')).digest();
   const b = crypto.createHash('sha256').update(PIN).digest();
   return crypto.timingSafeEqual(a, b);
 }
+
+const tokenGueltig = token => typeof token === 'string' && (tokens.get(token) ?? 0) > Date.now();
 
 // Adressen des Laptops im lokalen Netz (WLAN zuerst; virtuelle Netze und VPN weglassen)
 function lanAdressen() {
@@ -126,30 +176,45 @@ function lanAdressen() {
   return liste.sort((a, b) => rang(a.name) - rang(b.name)).map(e => e.adresse);
 }
 
-// ---------------- HTTP-API: nur Erkennung des Servers und Anmeldung mit PIN (setzt ein Cookie)
+// ---------------- HTTP-API: Erkennung des Servers und Anmeldung mit PIN (liefert ein Token)
 
 async function api(req, res, url) {
+  if (!herkunftErlaubt(req)) return json(res, 403, { fehler: 'Herkunft nicht erlaubt' });
+  const cors = req.headers.origin ? { 'Access-Control-Allow-Origin': req.headers.origin, Vary: 'Origin' } : {};
+  if (req.method === 'OPTIONS') {   // Vorabanfrage des Browsers (CORS)
+    res.writeHead(204, {
+      ...cors,
+      'Access-Control-Allow-Methods': 'GET, POST',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '600',
+    });
+    return res.end();
+  }
   if (url.pathname === '/api/status' && req.method === 'GET') {
-    return json(res, 200, { server: 'leiterschaukel-abgabe', version: 2, lehrer: istLehrer(req) });
+    return json(res, 200, { server: 'leiterschaukel-abgabe', version: 3 }, cors);
   }
   if (url.pathname === '/api/login' && req.method === 'POST') {
-    if (zuViele('login', ipVon(req), LIMITS.LOGINS_PRO_MINUTE)) {
-      return json(res, 429, { fehler: 'Zu viele Versuche – bitte eine Minute warten.' });
+    const ip = ipVon(req);
+    if (zuViele('login', ip, LIMITS.LOGINS_PRO_MINUTE) || zuViele('fehllogin', 'alle', LIMITS.FEHLLOGINS_PRO_MINUTE, false)) {
+      return json(res, 429, { fehler: 'Zu viele Versuche – bitte eine Minute warten.' }, cors);
     }
     const { pin } = await lesen(req);
-    if (!pinStimmt(pin)) return json(res, 403, { fehler: 'Falsche PIN' });
+    if (!pinStimmt(pin)) {
+      zuViele('fehllogin', 'alle', LIMITS.FEHLLOGINS_PRO_MINUTE);
+      return json(res, 403, { fehler: 'Falsche PIN' }, cors);
+    }
     const token = crypto.randomBytes(32).toString('hex');
-    lehrerTokens.add(token);
-    return json(res, 200, { ok: true }, { 'Set-Cookie': `lehrer=${token}; HttpOnly; SameSite=Strict; Path=/` });
+    tokens.set(token, Date.now() + LIMITS.ANMELDUNG);
+    return json(res, 200, { token }, cors);
   }
-  return json(res, 404, { fehler: 'Unbekannt' });
+  return json(res, 404, { fehler: 'Unbekannt' }, cors);
 }
 
 // ---------------- WebSocket (/ws): Abgaben der Schüler, Live-Liste und Löschen für den Lehrer
 //
 // Gerät → Server
+//   { typ: 'hallo', rolle: 'lehrer', raum, token }          Token aus POST /api/login; legt den Raum an
 //   { typ: 'hallo', rolle: 'schueler', raum, geraet }       Geräte-ID: zufällig, im Browser gespeichert
-//   { typ: 'hallo', rolle: 'lehrer', raum }                 nur nach Anmeldung mit PIN (Cookie)
 //   Schüler: { typ: 'abgabe', name, striche }               ersetzt die vorige Abgabe dieses Geräts
 //   Lehrer:  { typ: 'loeschen', id }  { typ: 'alle-loeschen' }
 // Server → Gerät
@@ -177,48 +242,56 @@ function verbunden(v) {
 
 function bearbeiten(v, ip, nachricht) {
   if (nachricht.typ === 'hallo' && !v.rolle) {
-    v.raum = raumCode(nachricht.raum);
+    const raum = raumCode(nachricht.raum);
+    if (!RAUMCODE.test(raum)) return v.schliessen(4000);
+    v.raum = raum;
     if (nachricht.rolle === 'lehrer') {
-      if (!istLehrer(v.req)) {
+      if (!tokenGueltig(nachricht.token)) {
         v.senden({ typ: 'fehler', code: 'pin', text: 'Bitte mit PIN anmelden' });
         return v.schliessen(4001);
       }
+      if (!raeume.has(raum)) {
+        if (raeume.size >= LIMITS.RAEUME) {
+          v.senden({ typ: 'fehler', code: 'raeume', text: 'Zu viele offene Räume auf dem Server' });
+          return v.schliessen(4003);
+        }
+        raeume.set(raum, { abgaben: new Map(), zuletzt: Date.now() });
+      }
       v.rolle = 'lehrer';
       v.senden({ typ: 'willkommen', adressen: lanAdressen(), port: PORT });
-      v.senden({ typ: 'liste', abgaben: abgabenListe(v.raum) });
-      return onlineMelden(v.raum);
+      v.senden({ typ: 'liste', abgaben: abgabenListe(raum) });
+      return onlineMelden(raum);
     }
     const geraet = String(nachricht.geraet ?? '');
     if (!/^[a-z0-9]{8,40}$/i.test(geraet)) return v.schliessen(4000);
     Object.assign(v, { rolle: 'schueler', geraet });
-    return onlineMelden(v.raum);
+    return onlineMelden(raum);
   }
 
   if (v.rolle === 'schueler' && nachricht.typ === 'abgabe') {
     const fehler = text => v.senden({ typ: 'fehler', text });
+    // Den Raum muss eine Lehrerseite geöffnet haben (nach einem Neustart des Servers legt sie ihn wieder an)
+    const r = raeume.get(v.raum);
+    if (!r) return fehler('Dieser Raum ist nicht geöffnet – bitte die Lehrkraft fragen.');
     if (zuViele('abgabe-ip', ip, LIMITS.ABGABEN_PRO_MINUTE)
       || zuViele('abgabe-geraet', v.geraet, LIMITS.ABGABEN_PRO_MINUTE)) {
       return fehler('Zu oft geteilt – bitte kurz warten.');
     }
     const ungueltig = pruefen(nachricht.striche);
     if (ungueltig) return fehler(ungueltig);
-    if (!raeume.has(v.raum)) {
-      if (raeume.size >= LIMITS.RAEUME) return fehler('Zu viele Räume');
-      raeume.set(v.raum, new Map());
-    }
-    const abgaben = raeume.get(v.raum);
-    const alt = abgaben.get(v.geraet);
-    if (!alt && abgaben.size >= LIMITS.ABGABEN_PRO_RAUM) return fehler('Zu viele Abgaben');
+    const alt = r.abgaben.get(v.geraet);
+    if (!alt && r.abgaben.size >= LIMITS.ABGABEN_PRO_RAUM) return fehler('Zu viele Abgaben');
     const name = String(nachricht.name ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, GRENZEN.NAME);
     // Erneutes Teilen ersetzt die vorige Abgabe dieses Geräts (gleiche ID, neue Zeit)
     const abgabe = { id: alt?.id ?? crypto.randomBytes(6).toString('hex'), name, zeit: Date.now(), striche: nachricht.striche };
-    abgaben.set(v.geraet, abgabe);
+    r.abgaben.set(v.geraet, abgabe);
+    r.zuletzt = Date.now();
     anLehrer(v.raum, { typ: 'abgabe', abgabe });
     return v.senden({ typ: 'geteilt' });
   }
 
   if (v.rolle === 'lehrer' && nachricht.typ === 'loeschen') {
-    const abgaben = raeume.get(v.raum);
+    const abgaben = raeume.get(v.raum)?.abgaben;
     for (const [geraet, abgabe] of abgaben ?? []) {
       if (abgabe.id === nachricht.id) {
         abgaben.delete(geraet);
@@ -229,12 +302,12 @@ function bearbeiten(v, ip, nachricht) {
   }
 
   if (v.rolle === 'lehrer' && nachricht.typ === 'alle-loeschen') {
-    raeume.delete(v.raum);
+    raeume.get(v.raum)?.abgaben.clear();
     anLehrer(v.raum, { typ: 'geleert' });
   }
 }
 
-// ---------------- Statische Dateien (die Simulation)
+// ---------------- Statische Dateien (die Simulation, für den lokalen Betrieb)
 
 const TYPEN = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -302,17 +375,27 @@ const server = http.createServer(async (req, res) => {
 
 server.on('upgrade', (req, socket) => {
   if (new URL(req.url, 'http://localhost').pathname !== '/ws') return socket.destroy();
+  if (!herkunftErlaubt(req)) {
+    socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+    return;
+  }
   const v = annehmen(req, socket, LIMITS.NACHRICHT);
   if (v) verbunden(v);
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  const adressen = lanAdressen();
+server.listen(PORT, HOST, () => {
+  const lokal = HOST === '0.0.0.0';
+  const adressen = lokal ? lanAdressen() : [];
   console.log('\nLeiterschaukel – Abgabe-Server läuft\n');
-  console.log('  Schüler:  ' + (adressen.length ? adressen.map(a => `http://${a}:${PORT}/`).join('\n            ')
-    : '(keine Netzwerkverbindung gefunden)'));
-  console.log(`  Lehrer:   http://localhost:${PORT}/lehrer      PIN: ${PIN}`);
-  console.log(`            (eigener Raum für eine Klasse: http://localhost:${PORT}/lehrer?raum=10b)`);
+  if (lokal) {
+    console.log(`  Lehrer:   http://localhost:${PORT}/lehrer   (QR-Code für die Schüler steht dann auf der Lehrerseite)`);
+    console.log('  Im WLAN:  ' + (adressen.length ? adressen.map(a => `http://${a}:${PORT}/`).join('\n            ')
+      : '(keine Netzwerkverbindung gefunden)'));
+  } else {
+    console.log(`  lauscht auf ${HOST}:${PORT}`);
+  }
+  console.log(`  PIN:      ${PIN}`);
+  console.log(`  Erlaubte Seiten: ${[...ERLAUBT].join(', ')} und Seiten von diesem Server`);
   console.log('  three.js: ' + (offline() ? 'Offline-Kopie aus server/offline' : 'aus dem Internet (CDN)'));
   console.log('\nBeenden mit Strg+C – alle Abgaben werden dabei gelöscht.\n');
 });

@@ -15,11 +15,13 @@ import './ziehen.js';
 import { initLink } from './link.js';
 import { initTafel, syncTafel, tafelOffen } from './tafel.js';
 import { initAbgabe } from './abgabe.js';
+import { initLaser } from './laser.js';
 
 initUi();
 initLink();
 initTafel();
 initAbgabe();
+initLaser();
 resetView();
 
 const SLOW_MOTION = 0.25;

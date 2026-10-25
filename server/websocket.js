@@ -118,16 +118,11 @@ export class Verbindung extends EventEmitter {
   }
 }
 
-// Handshake für eine Upgrade-Anfrage; gibt die Verbindung zurück oder null (dann ist der Socket schon zu)
+// Handshake für eine Upgrade-Anfrage; gibt die Verbindung zurück oder null (dann ist der Socket schon zu).
+// Welche Seiten sich verbinden dürfen (Origin), prüft der Aufrufer vorher.
 export function annehmen(req, socket, maxGroesse) {
   const schluessel = req.headers['sec-websocket-key'];
-  // Nur Seiten vom selben Server dürfen sich verbinden (Origin passt zu Host)
-  const herkunft = req.headers.origin;
-  let gleicheHerkunft = false;
-  try {
-    gleicheHerkunft = !herkunft || new URL(herkunft).host === req.headers.host;
-  } catch { /* ungültige Herkunft */ }
-  if (!schluessel || req.headers.upgrade?.toLowerCase() !== 'websocket' || !gleicheHerkunft) {
+  if (!schluessel || req.headers.upgrade?.toLowerCase() !== 'websocket') {
     socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n');
     return null;
   }

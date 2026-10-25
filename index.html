@@ -22,6 +22,7 @@
   <!-- QR-Code und Adresse der Simulation (Knopf „Link zeigen“) -->
   <div class="link-overlay" id="linkOverlay" hidden>
     <div class="link-box" role="dialog" aria-modal="true" aria-label="Link zur Simulation">
+      <p class="link-hinweis" id="linkHinweis" hidden></p>
       <div class="link-qr" id="linkQr"></div>
       <a class="link-text" id="linkText" target="_blank" rel="noopener"></a>
       <p class="status" id="linkLocal" hidden>Die Seite ist lokal geöffnet – gezeigt wird die öffentliche Adresse.</p>
@@ -50,6 +51,7 @@
         <span class="status" id="abgabenOnline"></span>
         <span class="status abgaben-adresse" id="abgabenAdresse"></span>
       </div>
+      <button id="abgabenLehrerQr" type="button">Lehrerseite auf anderem Gerät</button>
       <button id="abgabenGross" type="button">Groß</button>
       <button id="abgabenAlleLoeschen" class="gefahr" type="button">Alle löschen</button>
     </div>
@@ -84,6 +86,7 @@
         <button id="tafelOriginal" type="button">Original wiederherstellen</button>
         <button id="tafelAbgabeLoeschen" class="gefahr" type="button">Abgabe löschen</button>
       </div>
+      <button class="laser-btn" data-laser type="button" aria-pressed="false" title="Mit Apple Pencil oder Maus markieren (Taste L)">Laserpointer</button>
       <button id="tafelSchliessen" class="schliessen" type="button">Schließen ✕</button>
     </div>
     <div class="tafel-bereich" id="tafelBereich">
@@ -143,6 +146,7 @@
 
   <aside class="panel">
     <button id="linkBtn" class="link-btn" type="button">Link / QR-Code zeigen</button>
+    <button class="laser-btn" data-laser type="button" aria-pressed="false" title="Mit Apple Pencil oder Maus markieren (Taste L)">Laserpointer</button>
     <section>
       <h2>Versuch</h2>
       <div class="segmented" role="group" aria-label="Versuch auswählen">
@@ -212,6 +216,9 @@
       </div>
     </section>
   </aside>
+
+  <!-- Laserpointer: Spur über allem, nimmt selbst keine Berührungen an -->
+  <canvas id="laserCanvas" aria-hidden="true"></canvas>
 
   <script type="importmap">
     {
