@@ -15,7 +15,7 @@ import { lampSocket, setLampVisible } from './gluehlampe.js';
 // Das Messgerät steht auf dem Tisch und lässt sich um die senkrechte Achse drehen (Ziehen oder Knopf)
 const meter = new THREE.Group();
 meter.position.set(40, 0, 8);
-meter.rotation.y = -0.3;            // zu Beginn leicht zum Betrachter gedreht
+meter.rotation.y = state.meterAngle;
 scene.add(meter);
 const CABLE_CLEARANCE = 20;         // Kabel laufen in diesem Abstand um das Gerät herum (Gehäuseecken: 16,2 cm)
 
@@ -162,6 +162,7 @@ export function updateMeterFace() {
 }
 
 export function syncMeter() {
+  meter.rotation.y = state.meterAngle;
   needleGroup.rotation.z = -needle.pos * THREE.MathUtils.degToRad(METER.FULL_ANGLE);
 }
 
@@ -255,10 +256,11 @@ export function applyDisplay() {
 
 // ---------------- Messgerät drehen
 
-export const meterAngle = () => meter.rotation.y;
+export const meterAngle = () => state.meterAngle;
 
 export function setMeterAngle(angle) {
-  meter.rotation.y = Math.atan2(Math.sin(angle), Math.cos(angle));
+  state.meterAngle = Math.atan2(Math.sin(angle), Math.cos(angle));
+  meter.rotation.y = state.meterAngle;
   buildCables();
 }
 

@@ -2,6 +2,7 @@
 // „Link zeigen“: großes Fenster mit QR-Code und Adresse der Simulation (zum Abscannen vom Beamer)
 // Der Code wird im Browser aus der eigenen Adresse erzeugt; ist die Seite lokal geöffnet, zeigt er die
 // öffentliche Adresse (PUBLIC_URL). Die Bibliothek qrcode-generator wird erst beim ersten Öffnen geladen.
+// Auf der Lehrerseite des Abgabe-Servers zeigt er die Adresse für die Schüler im lokalen Netz (setLinkUrl).
 // ------------------------------------------------------------------
 import { PUBLIC_URL } from './config.js';
 
@@ -11,7 +12,11 @@ const $ = id => document.getElementById(id);
 // Lokal (Live Server, python -m http.server, Doppelklick) würde der Code auf den eigenen Rechner zeigen
 const isLocal = () => location.protocol === 'file:'
   || ['localhost', '127.0.0.1', '[::1]', ''].includes(location.hostname);
-const pageUrl = () => (isLocal() ? PUBLIC_URL : location.origin + location.pathname);
+let linkUrl = null;
+const pageUrl = () => linkUrl ?? (isLocal() ? PUBLIC_URL : location.origin + location.pathname);
+export function setLinkUrl(url) {
+  linkUrl = url;
+}
 
 let library = null;
 function loadLibrary() {
@@ -28,20 +33,25 @@ function loadLibrary() {
   return library;
 }
 
-async function showLink() {
+// QR-Code als SVG-Text
+export async function qrSvg(url) {
+  const qrcode = await loadLibrary();
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+  return qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+}
+
+export async function showLink() {
   const url = pageUrl();
   $('linkText').textContent = url.replace(/^https?:\/\//, '');
   $('linkText').href = url;
-  $('linkLocal').hidden = !isLocal();
+  $('linkLocal').hidden = linkUrl !== null || !isLocal();
   $('linkOverlay').hidden = false;
   $('linkClose').focus();
   const box = $('linkQr');
   try {
-    const qrcode = await loadLibrary();
-    const qr = qrcode(0, 'M');
-    qr.addData(url);
-    qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+    box.innerHTML = await qrSvg(url);
   } catch {
     box.textContent = 'Der QR-Code konnte nicht geladen werden (keine Internetverbindung?).';
   }

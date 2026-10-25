@@ -22,7 +22,7 @@ const unit = () => (state.meterMode === 'U' ? 'mV' : 'mA');
 
 // Magnet umdrehen: ausblenden, Pole tauschen, wieder einblenden
 const FLIP_DURATION = 0.8;
-const flip = { active: false, t: 0, swapped: false };
+const flip = state.flip;
 
 function updateUi() {
   const rotatable = state.setup === 'drehbar';

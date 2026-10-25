@@ -13,15 +13,20 @@ import { initUi, animateFlip, updateValue, updateHoldSlider } from './bedienfeld
 import { syncExplain } from './erklaerung.js';
 import './ziehen.js';
 import { initLink } from './link.js';
+import { initTafel, syncTafel, tafelOffen } from './tafel.js';
+import { initAbgabe } from './abgabe.js';
 
 initUi();
 initLink();
+initTafel();
+initAbgabe();
 resetView();
 
 const SLOW_MOTION = 0.25;
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
+  if (tafelOffen()) return;   // Tafel groß geöffnet: Szene ruht, damit das Zeichnen flüssig bleibt
   animateFlip(dt);
   if (!state.paused) stepPhysics(state.slowMotion ? dt * SLOW_MOTION : dt);   // Pause nur im Erklärmodus
   syncApparatus();
@@ -29,8 +34,11 @@ renderer.setAnimationLoop(() => {
   syncLed();
   syncLamp();
   syncExplain(dt);
+  syncTafel();
   updateValue();
   updateHoldSlider();
   controls.update();
+  camera.position.toArray(state.view.position);
+  controls.target.toArray(state.view.target);
   renderer.render(scene, camera);
 });

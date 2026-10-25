@@ -99,6 +99,12 @@ Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
   Reihe, nur seine Hervorhebung (weißer Rand) verschwindet.
 - **Magnet umdrehen (N ↔ S)** – derselbe Knopf wie in der rechten Leiste
 - **Elektronen zurücksetzen**
+- **Tafel:** Unter dem Magneten steht eine kleine Tafel mit einem festen Bild des Leiters im Magnetfeld
+  (`bilder/tafel.jpg`). Antippen (oder „Tafel öffnen“ im Bedienfeld) öffnet sie groß. Dort zeichnet man mit
+  Apple Pencil, Finger oder Maus: Stifte v (grün), B (blau), F_L (rot), Stift (schwarz), Radierer, Freihand oder
+  gerader Pfeil, Rückgängig, Alles löschen. Der Stiftdruck bestimmt die Strichbreite; sobald der Pencil benutzt
+  wurde, werden Finger und Handballen auf der Zeichenfläche ignoriert. Die Zeichnung bleibt im Browser gespeichert.
+  Läuft die Seite über den Abgabe-Server (siehe unten), können Schüler sie mit „Teilen“ abgeben.
 
 - Pfeile am Elektron: Geschwindigkeit v des Leiters (grün) und Lorentzkraft F_L auf das Elektron (rot);
   die Längen wachsen mit v bzw. v·B. Das Magnetfeld B zeigen Feldlinien im Polspalt (blau, von N nach S).
@@ -119,11 +125,146 @@ Abscannen vom Beamer. Der Code wird im Browser aus der eigenen Adresse erzeugt; 
 [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT) wird beim ersten Öffnen aus dem
 Internet geladen.
 
+## Abgabe im Unterricht (Abgabe-Server)
+
+Schüler zeichnen auf der Tafel und schicken ihre Zeichnung mit **„Teilen“** an den Lehrer-Laptop. Die Lehrerseite
+zeigt alle Abgaben live; ein Klick öffnet eine Abgabe groß auf der Tafel.
+
+Dafür läuft auf dem Laptop ein kleiner Node.js-Server, der **die Simulation selbst mit ausliefert** – Schüler und
+Lehrer öffnen alles über `http://<Laptop-IP>:8080`. (Die GitHub-Pages-Seite läuft über HTTPS und dürfte einen
+unverschlüsselten Server im lokalen Netz gar nicht ansprechen.) Die GitHub-Pages-Version funktioniert weiter
+wie bisher; ohne Server ist der Knopf „Teilen“ einfach ausgeblendet.
+
+### Installation (einmalig)
+
+```bash
+sudo dnf install nodejs        # Node.js ab Version 18; prüfen mit: node --version
+```
+
+Weitere Pakete sind nicht nötig (kein `npm install`). Optional, solange Internet da ist:
+
+```bash
+npm run offline                # lädt three.js und die QR-Code-Bibliothek nach server/offline/ (ca. 1,4 MB)
+```
+
+Dann liefert der Server diese Bibliotheken selbst aus, und die Simulation läuft auch in einem Netz **ohne
+Internet** (z. B. im Hotspot des Laptops). Ohne diesen Schritt holen die Geräte three.js wie bisher aus dem Internet.
+
+### Start
+
+Im Ordner `leiterschaukel-induktion`:
+
+```bash
+npm start
+```
+
+Die Konsole zeigt die Adresse für die Schüler, die Lehrerseite und die **PIN**, z. B.:
+
+```text
+  Schüler:  http://192.168.2.51:8080/
+  Lehrer:   http://localhost:8080/lehrer      PIN: 483920
+```
+
+Eigene PIN oder anderer Port: `PIN=2468 PORT=8090 npm start`. Beenden mit **Strg+C** – dabei sind alle Abgaben weg.
+
+### Ablauf in der Stunde
+
+1. Lehrer-Laptop: `http://localhost:8080/lehrer` öffnen, PIN eingeben. Unten erscheint die Leiste **„Abgaben“** mit
+   Adresse und QR-Code (Klick auf „Groß“ zeigt den QR-Code groß und alle Abgaben als Raster; „Link / QR-Code
+   zeigen“ zeigt jetzt ebenfalls die Schüleradresse).
+2. Schüler scannen den QR-Code, öffnen „Erklärung: Elektron im Leiter“, tippen auf die Tafel und zeichnen.
+   Optional Name/Kürzel eintragen, dann **„Teilen“** → „Geteilt ✓“. Erneutes Teilen ersetzt die vorige Abgabe
+   dieses Geräts.
+3. Neue Abgaben erscheinen in der Leiste ohne Neuladen (kurz grün umrandet). Ein Klick öffnet die Abgabe auf der
+   Tafel; die kleine Tafel in der Szene zeigt dann ebenfalls diese Abgabe, Antippen öffnet sie wieder.
+4. Die geöffnete Abgabe lässt sich mit denselben Werkzeugen ergänzen und radieren. Das ist **nur eine Arbeitskopie
+   auf dem Lehrer-Laptop**: Der Schüler sieht nichts davon, das Original bleibt erhalten. „Original
+   wiederherstellen“ verwirft die Änderungen. Teilt der Schüler erneut, während die Kopie bearbeitet ist, steht
+   „neue Version eingegangen“ im Titel – „Original wiederherstellen“ lädt sie.
+5. „Abgabe löschen“ (in der Tafel) bzw. „Alle löschen“ (in der Leiste) fragen einmal nach („Wirklich …?“).
+   „Eigene Tafel“ in der Leiste führt zurück zur eigenen Zeichnung.
+
+**Mehrere Klassen gleichzeitig:** Raumcode an die Lehreradresse hängen, z. B. `http://localhost:8080/lehrer?raum=10b`.
+Der QR-Code enthält den Raum dann automatisch; jede Lehrerseite sieht nur die Abgaben ihres Raums.
+
+### Firewall freigeben (Fedora, firewalld)
+
+Auf Fedora Workstation sind in der Standardzone die Ports 1025–65535 meist schon offen. Prüfen:
+
+```bash
+firewall-cmd --get-active-zones          # welche Zone hat das WLAN?
+firewall-cmd --list-all                  # Port 8080 bzw. 1025-65535 unter „ports“?
+```
+
+Falls nicht freigegeben:
+
+```bash
+sudo firewall-cmd --add-port=8080/tcp                                         # bis zum Neustart
+sudo firewall-cmd --permanent --add-port=8080/tcp && sudo firewall-cmd --reload  # dauerhaft
+sudo firewall-cmd --permanent --remove-port=8080/tcp && sudo firewall-cmd --reload  # wieder schließen
+```
+
+Liegt das WLAN in einer anderen Zone als der Standardzone, `--zone=<Zone>` ergänzen (beim Laptop-Hotspot heißt sie
+meist `nm-shared`: `sudo firewall-cmd --zone=nm-shared --add-port=8080/tcp`).
+
+### Wenn das Schul-WLAN die Geräte voneinander isoliert
+
+Viele Schul- und Gäste-WLANs lassen Geräte nicht miteinander sprechen („Client-Isolation“). Erkennbar daran, dass
+die Schülergeräte die Adresse nicht öffnen können, obwohl die Firewall offen ist. Auswege:
+
+- **Hotspot vom Laptop:** GNOME-Einstellungen → WLAN → Menü ⋮ → „WLAN-Hotspot einschalten …“ oder im Terminal
+  `nmcli device wifi hotspot ssid Physik password 'geheim123'`. Die Laptop-Adresse ist dann meist `10.42.0.1`;
+  der Server zeigt sie beim Start bzw. auf der Lehrerseite an (Server erst **nach** dem Einschalten des Hotspots
+  starten oder Lehrerseite neu laden). Der Laptop ist dabei meist nicht mehr im Internet → vorher
+  `npm run offline` ausführen. Firewall-Zone siehe oben (`nm-shared`).
+- **Hotspot vom Handy:** Laptop und Schülergeräte ins Handy-WLAN – dann haben alle auch Internet.
+- **Schul-IT fragen** nach einem Netz ohne Client-Isolation (z. B. ein Lehrer- oder Präsentations-WLAN).
+
+### Kurzer Testablauf (Laptop + iPad)
+
+1. Laptop: `npm start`, dann `http://localhost:8080/lehrer` öffnen, PIN eingeben.
+2. iPad im selben WLAN: QR-Code aus der Leiste scannen (Safari).
+3. iPad: „Erklärung: Elektron im Leiter“ → Tafel antippen → mit dem Pencil einen Pfeil zeichnen; die Handfläche
+   darf dabei aufliegen. Strichbreite folgt dem Druck, die Seite scrollt nicht.
+4. Name eintragen, „Teilen“ → „Geteilt ✓“. Auf dem Laptop erscheint die Abgabe sofort in der Leiste.
+5. Laptop: Abgabe anklicken, etwas ergänzen und radieren → Titel „(bearbeitet)“. Auf dem iPad ändert sich nichts.
+   „Original wiederherstellen“ zeigt wieder genau die Schülerzeichnung.
+6. iPad: weiterzeichnen, erneut „Teilen“ → auf dem Laptop bleibt es eine Kachel, mit neuem Inhalt.
+
+### Datenschutz und Schutzmaßnahmen
+
+- Abgaben liegen **nur im Arbeitsspeicher** des Servers; nichts wird auf die Festplatte geschrieben, es gibt keine
+  Accounts und keine externen Dienste. Beim Beenden des Servers ist alles weg. (Die eigene Zeichnung und der Name
+  bleiben nur im Browser des jeweiligen Geräts gespeichert.)
+- Lehrerseite, Abgabenliste und Löschen nur nach PIN (zufällig beim Start oder per `PIN=…`); nach der Anmeldung
+  merkt sich der Browser das per Cookie, bis der Server neu startet. Höchstens 5 PIN-Versuche pro Minute und Gerät.
+- Pro Abgabe höchstens 1,5 MB, 1500 Striche und 60 000 Punkte; höchstens 6 Abgaben pro Minute je Gerät und je
+  IP-Adresse; höchstens 150 Abgaben pro Raum und 20 Räume.
+- Der Server liefert nur die Dateien der Simulation aus (nicht `server/`, `tests/` oder versteckte Dateien).
+
+### Technik
+
+- `server/server.js`: statische Dateien, Anmeldung (`POST /api/login`), Erkennung (`GET /api/status`) und ein
+  WebSocket unter `/ws` für alles Weitere. `server/websocket.js` ist ein minimaler WebSocket-Server nur mit
+  Node-Bordmitteln (RFC 6455, Textnachrichten). Die Nachrichten sind oben in `server.js` beschrieben.
+- Zeichnungen werden als **Vektordaten** übertragen (`js/striche.js`): Freihandstriche als Punkte mit Stiftdruck,
+  Pfeile als Anfangs- und Endpunkt, jeweils mit Farbe. Koordinaten beziehen sich auf das Tafelbild (1600 × 1000).
+  Dieselbe Datei prüft die Abgaben auf dem Server.
+- Der **Zustand der Simulation** liegt zentral in `js/state.js`: Einstellungen, bewegte Teile (Schaukel, Zeiger,
+  Magnet, Elektronen), Drehung des Messgeräts, Kameraansicht und Tafel (Werkzeug, Zeichnungen). Die Darstellung
+  wird in jedem Bild daraus gezeichnet; `zustandAlsDaten()` liefert eine JSON-fähige Kopie. Das ist die Grundlage
+  für einen späteren Live-Modus (Simulation eines Schülers auf den Beamer spiegeln): Der Schüler schickt diese
+  Daten regelmäßig über seinen WebSocket, der Server reicht sie an die Lehrerseite weiter.
+- Das Tafelbild `bilder/tafel.jpg` ist ein Screenshot des Erklärmodus (Startansicht, drehbarer kurzer Magnet,
+  Nordpol oben). Es lässt sich durch ein anderes Bild im Seitenverhältnis 16 : 10 ersetzen – dann passen aber
+  bereits geteilte Zeichnungen nicht mehr dazu.
+
 ## Starten
 
 Die Simulation lädt [three.js](https://threejs.org) aus dem Internet und muss über einen Webserver
 geöffnet werden (ein Doppelklick auf `index.html` reicht nicht):
 
+- **Mit Abgabe-Funktion:** `npm start` (siehe oben)
 - **VS Code:** Erweiterung „Live Server“, Rechtsklick auf `index.html` → „Open with Live Server“
 - **Terminal:** im Projektordner `python3 -m http.server` ausführen und <http://localhost:8000> öffnen
 
@@ -133,10 +274,18 @@ geöffnet werden (ein Doppelklick auf `index.html` reicht nicht):
 leiterschaukel-induktion/
 ├── index.html          # Seitengerüst und Bedienfeld
 ├── css/style.css
+├── bilder/tafel.jpg    # Bild auf der Tafel (Leiter im Magnetfeld)
+├── server/
+│   ├── server.js       # Abgabe-Server: liefert die Simulation aus, Abgaben per WebSocket (npm start)
+│   ├── websocket.js    # minimaler WebSocket-Server ohne Abhängigkeiten
+│   └── offline.js      # lädt three.js & Co. für den Betrieb ohne Internet (npm run offline)
 ├── js/
 │   ├── main.js         # Start und Render-Schleife
 │   ├── config.js       # Maße und Modellgrößen
-│   ├── state.js        # Zustand (Magnet, Messgerät, …)
+│   ├── state.js        # zentraler Zustand (Einstellungen, bewegte Teile, Ansicht, Tafel)
+│   ├── tafel.js        # Tafel in der Szene und großes Zeichenfenster (Pencil, Druck, Handballen)
+│   ├── striche.js      # Striche: Datenformat, Prüfung, Zeichnen (auch vom Server genutzt)
+│   ├── abgabe.js       # Teilen (Schüler) und Lehrerseite (Abgaben live, PIN, QR-Code)
 │   ├── physik.js       # Schaukel, Induktionsspannung, Strom, Bremskraft, Zeiger (ohne 3D, testbar)
 │   ├── szene.js        # Renderer, Kamera, Licht, Tisch
 │   ├── aufbau.js       # Stativ, Leiterschaukel, Hufeisenmagnet mit Drehgelenk

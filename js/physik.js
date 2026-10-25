@@ -14,19 +14,8 @@ import { state } from './state.js';
 const degToRad = deg => deg * Math.PI / 180;
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-// Schaukel: Auslenkwinkel θ gegen die Senkrechte (positiv = Stab nach vorne), Winkelgeschwindigkeit ω
-// Festhalten: holdTarget ist die Lage, der der Leiter folgt (Regler bzw. Finger)
-export const swing = { theta: 0, omega: 0, dragging: false, target: 0, holdTarget: 0 };
-// Magnet auf dem Tisch: Verschiebung z entlang der Schwingrichtung in cm (0 = Stab mitten im Polbereich),
-// Geschwindigkeit v in m/s. Beim drehbaren Magneten bleibt beides 0.
-export const magnetMotion = { z: 0, v: 0, dragging: false, target: 0 };
-// Zeiger des Messgeräts: Ausschlag als Anteil des Vollausschlags (−1 … 1), Geschwindigkeit
-export const needle = { pos: 0, vel: 0 };
-// Glühlampe: Temperatur des Glühdrahts als Anteil der Volllast (1 = Leistung bei voller Helligkeit)
-export const lamp = { heat: 0 };
-// Erklärmodus: Lage des Elektrons entlang des Stabs in cm (0 = Mitte, positiv = rechts).
-// Bei „Viele Elektronen“ ist x die gemeinsame Verschiebung aller Elektronen (siehe electronPositions).
-export const electron = { x: 0 };
+// Bewegte Teile: liegen im zentralen Zustand (state.js), hier unter kurzen Namen
+export const { swing, magnetMotion, needle, lamp, electron } = state;
 
 // ---------------- Geometrie
 
