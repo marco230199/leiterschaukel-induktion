@@ -16,8 +16,11 @@ Zwei Versuche, per Knopf umschaltbar:
   Schiebt man den Magneten gegen den Stab, drückt der Bogen die Schaukel mit.
 
 - **Schaukel bewegen:** Stab oder Bügel mit Maus/Finger fassen und ziehen. Beim Loslassen schwingt die
-  Schaukel gedämpft weiter. „Auslenken und loslassen“ startet eine gleichmäßige Schwingung, „Anhalten“
-  bringt sie zur Ruhe. Am Magneten schlägt die Schaukel an.
+  Schaukel gedämpft weiter. „Auslenken und loslassen“ startet eine gleichmäßige Schwingung, „Zurücksetzen“
+  bringt sie sofort in die Ruhelage. Am Magneten schlägt die Schaukel an.
+- **Pause / Weiter:** friert den Versuch im aktuellen Zustand ein – Schaukel, Magnet, Zeigerausschlag und eine
+  leuchtende LED oder Glühlampe bleiben stehen. Ziehen ist in der Pause gesperrt. „Auslenken und loslassen“ und
+  „Zurücksetzen“ beenden die Pause. Derselbe Schalter wie „Pause“ im Erklärmodus.
 - **Zeitlupe** (¼ der Geschwindigkeit), damit man Bewegung und Zeiger gleichzeitig verfolgen kann
 - **Magnet umdrehen (N ↔ S):** Der Zeiger schlägt andersherum aus.
 - **Langer Hufeisenmagnet** (in beiden Versuchen): Schenkel 32 statt 11 cm, sie reichen 16 cm vor und hinter
@@ -30,7 +33,7 @@ Zwei Versuche, per Knopf umschaltbar:
   Dazwischen gilt U ∼ cos α.
 - **Messgerät:** Spannung (mV) oder Stromstärke (mA), Messbereiche ±1, ±3, ±10. Der Zeiger ist träge,
   schwingt leicht nach und bleibt bei Überlast am Anschlag. Wahlweise Messwert zusätzlich als Zahl.
-  „Anhalten“ setzt den Zeiger sofort auf 0. Das Messgerät lässt sich anfassen und durch seitliches Ziehen
+  „Zurücksetzen“ setzt den Zeiger sofort auf 0. Das Messgerät lässt sich anfassen und durch seitliches Ziehen
   um die senkrechte Achse drehen; „Messgerät zu mir drehen“ richtet die Skala zur aktuellen Ansicht aus.
   Die Kabel laufen dabei um das Gerät herum mit.
 - **Kabel vertauschen** (Messgerät und LED): Das rote Kabel vom rechten Stabende steckt dann in der
@@ -83,7 +86,7 @@ durchsichtig; in seiner Mitte sitzt ein (stark vergrößertes) Elektron, dargest
 Kamera schaut schräg von vorne auf den Stab. Schaukel (und auf dem Tisch der Magnet) lassen sich weiter ziehen.
 Links erscheint ein eigenes Bedienfeld für den Erklärmodus:
 
-- **Pause / Weiter:** friert die Bewegung ein (Schaukel, Magnet, Elektron). Die Pfeile zeigen den Augenblick,
+- **Pause / Weiter:** friert die Bewegung ein (Schaukel, Magnet, Elektron; gekoppelt mit „Pause“ im Versuch). Die Pfeile zeigen den Augenblick,
   so bleibt z. B. der Geschwindigkeitspfeil v sichtbar, obwohl nichts mehr läuft.
 - **Zeitlupe:** wie im Bedienfeld rechts (beide Schalter sind gekoppelt).
 - **Leiter festhalten:** Der Leiter pendelt nicht mehr, er bleibt, wo er ist. Mit dem Regler „Lage des

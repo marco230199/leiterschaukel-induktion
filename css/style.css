@@ -114,6 +114,7 @@ html, body {
 }
 .button-row { display: flex; gap: 6px; }
 .panel .button-row button { margin-top: 8px; }
+.panel #runPauseBtn { margin-top: 6px; }
 .value { margin: 8px 0 0; font-size: 1.4rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: center; }
 
 /* Bedienfeld des Erklärmodus: links unter der Überschrift */
@@ -157,7 +158,8 @@ html, body {
 .popup .slider { margin-top: 8px; }
 /* Schalter für Pause, Zeitlupe, Festhalten: eingeschaltet blau gefüllt */
 .popup .toggles button.state[aria-pressed="false"] { opacity: 1; box-shadow: none; }
-.popup button.state[aria-pressed="true"] { background: #1d4f91; border-color: #1d4f91; color: #fff; }
+.popup button.state[aria-pressed="true"],
+.panel button.state[aria-pressed="true"] { background: #1d4f91; border-color: #1d4f91; color: #fff; }
 
 /* „Link zeigen“: QR-Code groß über der ganzen Seite */
 .link-overlay {

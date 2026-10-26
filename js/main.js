@@ -30,7 +30,7 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (tafelOffen()) return;   // Tafel groß geöffnet: Szene ruht, damit das Zeichnen flüssig bleibt
   animateFlip(dt);
-  if (!state.paused) stepPhysics(state.slowMotion ? dt * SLOW_MOTION : dt);   // Pause nur im Erklärmodus
+  if (!state.paused) stepPhysics(state.slowMotion ? dt * SLOW_MOTION : dt);
   syncApparatus();
   syncMeter();
   syncLed();

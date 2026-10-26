@@ -32,7 +32,8 @@ function updateUi() {
   $('explainPanel').hidden = !state.explain;
   $('explainHandInfo').hidden = !state.showExplainHand;
   $('pauseInfo').hidden = !state.paused;
-  $('pauseBtn').textContent = state.paused ? 'Weiter' : 'Pause';
+  $('pauseBtn').textContent = $('runPauseBtn').textContent = state.paused ? 'Weiter' : 'Pause';
+  $('runPauseBtn').setAttribute('aria-pressed', String(state.paused));
   $('holdBtn').textContent = state.hold ? 'Leiter loslassen' : 'Leiter festhalten';
   $('holdBox').hidden = !state.hold;
   $('manyBtn').setAttribute('aria-pressed', String(state.manyElectrons));
@@ -197,12 +198,25 @@ export function initUi() {
     stopSwing();
     syncApparatus();
   });
-  $('pushBtn').addEventListener('click', () => {   // „loslassen“: Festhalten endet
+  $('pushBtn').addEventListener('click', () => {   // „loslassen“: Festhalten und Pause enden
     if (state.hold) setHold(false);
+    state.paused = false;
     pushSwing();
     updateUi();
   });
-  $('stopBtn').addEventListener('click', stopSwing);
+  // Zurücksetzen: Schaukel in die Ruhelage, Zeiger auf 0; eine Pause endet
+  $('stopBtn').addEventListener('click', () => {
+    state.paused = false;
+    stopSwing();
+    updateUi();
+  });
+  // Pause im Versuch: friert alles im aktuellen Zustand ein (Schaukel, Magnet, Zeiger, LED, Glühlampe);
+  // derselbe Zustand wie „Pause“ im Erklärmodus
+  $('runPauseBtn').addEventListener('click', () => {
+    cancelDrag();
+    state.paused = !state.paused;
+    updateUi();
+  });
   $('meterTurnBtn').addEventListener('click', () => turnMeterTowards(camera.position));
   $('slowCheck').addEventListener('change', e => { state.slowMotion = e.target.checked; updateUi(); });
   const startFlip = () => {

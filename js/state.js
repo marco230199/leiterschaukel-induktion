@@ -25,7 +25,7 @@ export const state = {
   showB: false,
   showF: false,
   hold: false,        // Erklärmodus: Leiter festgehalten (pendelt nicht), Lage per Schieberegler oder Ziehen
-  paused: false,      // Erklärmodus: Bewegung angehalten (Pfeile zeigen den Augenblick)
+  paused: false,      // Pause (Versuch und Erklärmodus): alles steht im aktuellen Zustand, Pfeile zeigen den Augenblick
   meterAngle: -0.3,   // Drehung des Messgeräts um die senkrechte Achse in rad (zu Beginn leicht zum Betrachter)
 
   // ---- bewegte Teile (fortgeschrieben von physik.js)
