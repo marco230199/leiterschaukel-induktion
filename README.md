@@ -236,7 +236,8 @@ Zuklappen): `systemd-inhibit --what=idle:sleep:handle-lid-switch npm start`.
   für einen späteren Live-Modus (Simulation eines Schülers auf den Beamer spiegeln): Der Schüler schickt diese
   Daten regelmäßig über seinen WebSocket, der Server reicht sie an die Lehrerseite weiter.
 - Das Tafelbild `bilder/tafel.jpg` ist ein Screenshot des Erklärmodus (Startansicht, drehbarer kurzer Magnet,
-  Nordpol oben). Es lässt sich durch ein anderes Bild im Seitenverhältnis 16 : 10 ersetzen – dann passen aber
+  Nordpol oben) mit einem schwarzen Pfeil rechts neben dem Stab, der die Bewegungsrichtung vorgibt (nach hinten,
+  zum Bogen des Magneten). Es lässt sich durch ein anderes Bild im Seitenverhältnis 16 : 10 ersetzen – dann passen aber
   bereits geteilte Zeichnungen nicht mehr dazu.
 
 ## Starten
