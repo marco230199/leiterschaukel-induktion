@@ -1,5 +1,0 @@
-# Caddy: HTTPS mit automatischem Zertifikat (Let's Encrypt) und Weiterleitung an den Abgabe-Server.
-# einrichten.sh ersetzt DOMAIN durch die Adresse des Servers. Caddy schreibt hier kein Zugriffsprotokoll.
-DOMAIN {
-	reverse_proxy 127.0.0.1:8080
-}

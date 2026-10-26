@@ -1,14 +1,12 @@
 // ------------------------------------------------------------------
-// Abgabe im Unterricht über den Abgabe-Server (siehe server/)
+// Abgabe im Unterricht (nur wenn die Seite vom Abgabe-Server auf dem Lehrer-Laptop kommt, siehe server/)
 //
 // Schüler:  „Teilen“ schickt die eigene Tafelzeichnung als Vektordaten an den Server; erneutes Teilen ersetzt
 //           die vorige Abgabe dieses Geräts. Nur mit Raumcode in der Adresse (?raum=…, steht im QR-Code).
 // Lehrer:   ?lehrer (PIN) – erzeugt einen zufälligen Raumcode und zeigt alle Abgaben dieses Raums live (WebSocket)
 //           mit QR-Code für die Schüler. Eine Abgabe öffnet sich auf der Tafel als Arbeitskopie: Ergänzen und
 //           Radieren bleiben nur hier, das Original auf dem Server bleibt unverändert („Original wiederherstellen“).
-// Welcher Server: kommt die Seite vom Abgabe-Server selbst (lokal auf dem Laptop, Cloudflare Tunnel), dieser;
-// sonst ?server=… oder ABGABE_SERVER aus config.js (GitHub Pages → Server im Internet per HTTPS/WSS).
-// Ohne erreichbaren Server bleibt das alles ausgeblendet.
+// Ohne Server (GitHub Pages, lokaler Testserver) bleibt das alles ausgeblendet.
 // Nachrichten über den WebSocket: siehe Beschreibung in server/server.js.
 // ------------------------------------------------------------------
 import { packen, entpacken, zeichneAlle, GRENZEN } from './striche.js';
@@ -17,14 +15,11 @@ import {
   oeffneTafel, schliesseTafel, mitRueckfrage,
 } from './tafel.js';
 import { setLinkUrl, qrSvg, showLink } from './link.js';
-import { ABGABE_SERVER } from './config.js';
 
 const $ = id => document.getElementById(id);
 const parameter = new URLSearchParams(location.search);
-const serverParameter = parameter.get('server');
 let raum = (parameter.get('raum') ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20);
-let basis = null;          // Adresse des Abgabe-Servers, z. B. 'https://49-12-34-56.sslip.io'
-let eigenerServer = false; // Seite kommt vom Abgabe-Server selbst
+let basis = null;          // Adresse des Abgabe-Servers (= Herkunft der Seite), z. B. 'http://192.168.2.51:8080'
 
 function speicher(schluessel, wert) {
   try {
@@ -53,32 +48,15 @@ async function anfrage(weg, optionen = {}) {
   return daten;
 }
 
-async function istAbgabeServer(kandidat) {
-  try {
-    const antwort = await fetch(kandidat + '/api/status', { cache: 'no-store', signal: AbortSignal.timeout(10000) });
-    return (await antwort.json()).server === 'leiterschaukel-abgabe';
-  } catch {
-    return false;
-  }
-}
-
-// Abgabe-Server suchen: zuerst die eigene Seite (außer auf GitHub Pages), dann ?server=… bzw. ABGABE_SERVER
+// Läuft die Seite über den Abgabe-Server? (GitHub Pages ist HTTPS und hat keinen – dann gar nicht erst fragen)
 async function serverFinden() {
-  if (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io')
-    && await istAbgabeServer(location.origin)) {
-    eigenerServer = true;
-    return location.origin;
-  }
-  const kandidat = (serverParameter || ABGABE_SERVER).replace(/\/+$/, '');
-  if (!kandidat) return null;
+  if (location.protocol !== 'http:') return null;
   try {
-    const url = new URL(kandidat);
-    // von einer HTTPS-Seite aus nur HTTPS (sonst blockiert der Browser ohnehin)
-    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && location.protocol === 'http:')) return null;
+    const antwort = await fetch(location.origin + '/api/status', { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+    return (await antwort.json()).server === 'leiterschaukel-abgabe' ? location.origin : null;
   } catch {
     return null;
   }
-  return await istAbgabeServer(kandidat) ? kandidat : null;
 }
 
 // WebSocket zum Server, der sich nach einer Unterbrechung (WLAN weg, Laptop zugeklappt) selbst neu verbindet
@@ -128,18 +106,11 @@ export async function initAbgabe() {
 }
 
 // Adresse für die Schüler (bzw. mit lehrer = true für die Lehrerseite auf einem zweiten Gerät, gleicher Raum):
-// kommt die Seite vom Laptop selbst (localhost), dessen Adresse im WLAN; sonst dieselbe Seite (GitHub Pages,
-// Tunnel, Hetzner) – jeweils mit Raumcode
+// ist die Seite am Laptop selbst geöffnet (localhost), dessen Adresse im WLAN – jeweils mit Raumcode
 function schuelerUrl(adressen = [], port = 0, lehrer = false) {
-  let url;
-  if (eigenerServer && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
-    url = adressen.length ? `http://${adressen[0]}:${port}/` : location.origin + '/';
-  } else {
-    url = location.origin + location.pathname;
-  }
-  url += (lehrer ? '?lehrer&raum=' : '?raum=') + raum;
-  if (!eigenerServer && serverParameter) url += '&server=' + encodeURIComponent(serverParameter);
-  return url;
+  const amLaptop = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+  const url = amLaptop && adressen.length ? `http://${adressen[0]}:${port}/` : location.origin + '/';
+  return url + (lehrer ? '?lehrer&raum=' : '?raum=') + raum;
 }
 
 // ================= Schüler
@@ -175,7 +146,7 @@ function starteSchueler() {
     if (nachricht.typ === 'geteilt') melde('Geteilt ✓', true);
     if (nachricht.typ === 'fehler') melde(nachricht.text, false);
   });
-  const KEINE_VERBINDUNG = 'Keine Verbindung zum Server – bitte gleich noch einmal versuchen.';
+  const KEINE_VERBINDUNG = 'Keine Verbindung zum Lehrer-Laptop – bitte gleich noch einmal versuchen.';
   knopf.addEventListener('click', () => {
     const gesendet = leitung.senden({ typ: 'abgabe', name: name.value.trim(), striche: packen(eigenesDokument.striche) });
     if (!gesendet) return melde(KEINE_VERBINDUNG, false);
@@ -295,15 +266,15 @@ function verbinden() {
 
 // Adresse und QR-Code für die Schüler
 let adresseGezeigt = false;
-const netz = { adressen: [], port: 0 };   // Adressen des Laptops im WLAN (lokaler Betrieb)
+const netz = { adressen: [], port: 0 };   // Adressen des Laptops im WLAN
 async function adresseZeigen({ adressen, port }) {
   Object.assign(netz, { adressen, port });
   if (adresseGezeigt) return;
   adresseGezeigt = true;
   const url = schuelerUrl(adressen, port);
   setLinkUrl(url);
-  $('abgabenAdresse').textContent = url.replace(/^https?:\/\//, '');
-  $('abgabenAdresse').title = eigenerServer && adressen.length > 1
+  $('abgabenAdresse').textContent = url.replace(/^http:\/\//, '');
+  $('abgabenAdresse').title = adressen.length > 1
     ? 'Weitere Adressen des Laptops: ' + adressen.slice(1).map(a => `${a}:${port}`).join(', ') : '';
   try {
     $('abgabenQrBild').innerHTML = await qrSvg(url);

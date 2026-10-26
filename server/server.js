@@ -1,21 +1,12 @@
 // ------------------------------------------------------------------
-// Abgabe-Server für den Unterricht
+// Abgabe-Server für den Unterricht (läuft auf dem Lehrer-Laptop im Klassenzimmer)
 //
-// Zwei Betriebsarten mit demselben Programm:
-// - im Internet (z. B. Hetzner hinter Caddy, siehe server/deploy/): Die Simulation bleibt auf GitHub Pages und
-//   verbindet sich per HTTPS/WSS mit diesem Server. Nur die erlaubten Herkünfte (ERLAUBTE_HERKUNFT) dürfen ihn nutzen.
-// - lokal auf dem Lehrer-Laptop: Der Server liefert die Simulation selbst mit aus (statische Dateien aus diesem
-//   Repo), Schüler und Lehrer öffnen alles über http://<Laptop-IP>:<Port>.
-// Zeichnungen der Schüler kommen als Vektordaten per WebSocket an und gehen live an die Lehrerseite.
-// Alles liegt nur im Arbeitsspeicher; beim Beenden ist alles weg. Keine Abhängigkeiten außer Node.js (≥ 18).
+// - liefert die Simulation selbst aus (statische Dateien aus diesem Repo), damit Schüler und Lehrer alles über
+//   http://<Laptop-IP>:<Port> öffnen – die GitHub-Pages-Seite (HTTPS) dürfte diesen Server nicht ansprechen
+// - nimmt Tafelzeichnungen der Schüler als Vektordaten an und meldet sie per WebSocket live an die Lehrerseite
+// - hält alles nur im Arbeitsspeicher; beim Beenden ist alles weg. Keine Abhängigkeiten außer Node.js (≥ 18).
 //
-// Start:  npm start   bzw.  node server/server.js
-// Umgebungsvariablen:
-//   PORT               Port (8080)
-//   HOST               Adresse, auf der der Server lauscht (0.0.0.0; hinter Caddy: 127.0.0.1)
-//   PIN                PIN der Lehrerseite (sonst zufällig, steht beim Start in der Konsole)
-//   ERLAUBTE_HERKUNFT  Webseiten, die den Server nutzen dürfen, durch Komma getrennt
-//                      (https://marco230199.github.io); Seiten vom Server selbst sind immer erlaubt
+// Start:  npm start   bzw.  node server/server.js      Umgebungsvariablen: PORT (8080), PIN (sonst zufällig)
 // ------------------------------------------------------------------
 import http from 'node:http';
 import fs from 'node:fs';
@@ -27,10 +18,7 @@ import { pruefen, GRENZEN } from '../js/striche.js';
 import { annehmen } from './websocket.js';
 
 const PORT = Number(process.env.PORT) || 8080;
-const HOST = process.env.HOST || '0.0.0.0';
 const PIN = String(process.env.PIN || crypto.randomInt(100000, 1000000));
-const ERLAUBT = new Set((process.env.ERLAUBTE_HERKUNFT ?? 'https://marco230199.github.io')
-  .split(',').map(h => h.trim().replace(/\/+$/, '')).filter(Boolean));
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OFFLINE = path.join(ROOT, 'server', 'offline');   // optionale Kopie von three.js & Co. (npm run offline)
 const CDN = 'https://cdn.jsdelivr.net/npm/';
@@ -39,7 +27,6 @@ const LIMITS = {
   NACHRICHT: 1.5 * 1024 * 1024, // größte WebSocket-Nachricht (Abgabe) in Byte
   ABGABEN_PRO_MINUTE: 6,        // je Gerät und je IP-Adresse
   LOGINS_PRO_MINUTE: 5,         // PIN-Versuche je IP-Adresse
-  FEHLLOGINS_PRO_MINUTE: 60,    // falsche PINs insgesamt (gegen Raten von vielen Adressen aus)
   ABGABEN_PRO_RAUM: 150,
   RAEUME: 20,
   RAUM_LEERLAUF: 12 * 3600_000, // Raum ohne Lehrerseite und ohne Aktivität wird nach 12 h gelöscht
@@ -83,11 +70,11 @@ setInterval(() => {
 // ---------------- Begrenzung: höchstens max Ereignisse je Schlüssel in der letzten Minute
 
 const zaehler = new Map();
-function zuViele(art, schluessel, max, zaehlen = true) {
+function zuViele(art, schluessel, max) {
   const key = art + '|' + schluessel, jetzt = Date.now();
   const zeiten = (zaehler.get(key) ?? []).filter(t => jetzt - t < 60_000);
   const voll = zeiten.length >= max;
-  if (!voll && zaehlen) zeiten.push(jetzt);
+  if (!voll) zeiten.push(jetzt);
   zaehler.set(key, zeiten);
   return voll;
 }
@@ -95,34 +82,6 @@ setInterval(() => {
   const jetzt = Date.now();
   for (const [key, zeiten] of zaehler) if (zeiten.every(t => jetzt - t >= 60_000)) zaehler.delete(key);
 }, 60_000).unref();
-
-// ---------------- Herkunft (CORS) und Adresse des Geräts
-
-// Erlaubt sind die eingestellten Seiten (GitHub Pages) und Seiten, die von diesem Server selbst kommen
-// (lokaler Betrieb, Cloudflare Tunnel). Ohne Origin-Kopf (kein Browser, z. B. curl) gibt es nichts zu prüfen –
-// gegen Skripte helfen nur PIN und Begrenzungen.
-function herkunftErlaubt(req) {
-  const herkunft = req.headers.origin;
-  if (!herkunft) return true;
-  if (ERLAUBT.has(herkunft)) return true;
-  try {
-    return new URL(herkunft).host === req.headers.host;
-  } catch {
-    return false;
-  }
-}
-
-// Kommt die Verbindung von einem Proxy auf demselben Rechner (Caddy, cloudflared), steht die echte Adresse des
-// Geräts als letzter Eintrag in X-Forwarded-For (den hängt der Proxy an; davor kann das Gerät selbst etwas
-// hineinschreiben). Von außen direkt kommende Verbindungen können so nichts vortäuschen.
-function ipVon(req) {
-  const direkt = req.socket.remoteAddress ?? '';
-  const weitergeleitet = req.headers['x-forwarded-for'];
-  if (weitergeleitet && /^(127\.|::1$|::ffff:127\.)/.test(direkt)) {
-    return String(weitergeleitet).split(',').at(-1).trim();
-  }
-  return direkt;
-}
 
 // ---------------- Hilfen
 
@@ -155,6 +114,8 @@ function lesen(req) {
   });
 }
 
+const ipVon = req => req.socket.remoteAddress ?? '';
+
 function pinStimmt(eingabe) {
   const a = crypto.createHash('sha256').update(String(eingabe ?? '')).digest();
   const b = crypto.createHash('sha256').update(PIN).digest();
@@ -179,35 +140,20 @@ function lanAdressen() {
 // ---------------- HTTP-API: Erkennung des Servers und Anmeldung mit PIN (liefert ein Token)
 
 async function api(req, res, url) {
-  if (!herkunftErlaubt(req)) return json(res, 403, { fehler: 'Herkunft nicht erlaubt' });
-  const cors = req.headers.origin ? { 'Access-Control-Allow-Origin': req.headers.origin, Vary: 'Origin' } : {};
-  if (req.method === 'OPTIONS') {   // Vorabanfrage des Browsers (CORS)
-    res.writeHead(204, {
-      ...cors,
-      'Access-Control-Allow-Methods': 'GET, POST',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '600',
-    });
-    return res.end();
-  }
   if (url.pathname === '/api/status' && req.method === 'GET') {
-    return json(res, 200, { server: 'leiterschaukel-abgabe', version: 3 }, cors);
+    return json(res, 200, { server: 'leiterschaukel-abgabe', version: 3 });
   }
   if (url.pathname === '/api/login' && req.method === 'POST') {
-    const ip = ipVon(req);
-    if (zuViele('login', ip, LIMITS.LOGINS_PRO_MINUTE) || zuViele('fehllogin', 'alle', LIMITS.FEHLLOGINS_PRO_MINUTE, false)) {
-      return json(res, 429, { fehler: 'Zu viele Versuche – bitte eine Minute warten.' }, cors);
+    if (zuViele('login', ipVon(req), LIMITS.LOGINS_PRO_MINUTE)) {
+      return json(res, 429, { fehler: 'Zu viele Versuche – bitte eine Minute warten.' });
     }
     const { pin } = await lesen(req);
-    if (!pinStimmt(pin)) {
-      zuViele('fehllogin', 'alle', LIMITS.FEHLLOGINS_PRO_MINUTE);
-      return json(res, 403, { fehler: 'Falsche PIN' }, cors);
-    }
+    if (!pinStimmt(pin)) return json(res, 403, { fehler: 'Falsche PIN' });
     const token = crypto.randomBytes(32).toString('hex');
     tokens.set(token, Date.now() + LIMITS.ANMELDUNG);
-    return json(res, 200, { token }, cors);
+    return json(res, 200, { token });
   }
-  return json(res, 404, { fehler: 'Unbekannt' }, cors);
+  return json(res, 404, { fehler: 'Unbekannt' });
 }
 
 // ---------------- WebSocket (/ws): Abgaben der Schüler, Live-Liste und Löschen für den Lehrer
@@ -307,7 +253,7 @@ function bearbeiten(v, ip, nachricht) {
   }
 }
 
-// ---------------- Statische Dateien (die Simulation, für den lokalen Betrieb)
+// ---------------- Statische Dateien (die Simulation)
 
 const TYPEN = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -375,27 +321,17 @@ const server = http.createServer(async (req, res) => {
 
 server.on('upgrade', (req, socket) => {
   if (new URL(req.url, 'http://localhost').pathname !== '/ws') return socket.destroy();
-  if (!herkunftErlaubt(req)) {
-    socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
-    return;
-  }
   const v = annehmen(req, socket, LIMITS.NACHRICHT);
   if (v) verbunden(v);
 });
 
-server.listen(PORT, HOST, () => {
-  const lokal = HOST === '0.0.0.0';
-  const adressen = lokal ? lanAdressen() : [];
+server.listen(PORT, '0.0.0.0', () => {
+  const adressen = lanAdressen();
   console.log('\nLeiterschaukel – Abgabe-Server läuft\n');
-  if (lokal) {
-    console.log(`  Lehrer:   http://localhost:${PORT}/lehrer   (QR-Code für die Schüler steht dann auf der Lehrerseite)`);
-    console.log('  Im WLAN:  ' + (adressen.length ? adressen.map(a => `http://${a}:${PORT}/`).join('\n            ')
-      : '(keine Netzwerkverbindung gefunden)'));
-  } else {
-    console.log(`  lauscht auf ${HOST}:${PORT}`);
-  }
+  console.log(`  Lehrer:   http://localhost:${PORT}/lehrer   (QR-Code für die Schüler steht dann auf der Lehrerseite)`);
+  console.log('  Im WLAN:  ' + (adressen.length ? adressen.map(a => `http://${a}:${PORT}/`).join('\n            ')
+    : '(keine Netzwerkverbindung gefunden)'));
   console.log(`  PIN:      ${PIN}`);
-  console.log(`  Erlaubte Seiten: ${[...ERLAUBT].join(', ')} und Seiten von diesem Server`);
   console.log('  three.js: ' + (offline() ? 'Offline-Kopie aus server/offline' : 'aus dem Internet (CDN)'));
   console.log('\nBeenden mit Strg+C – alle Abgaben werden dabei gelöscht.\n');
 });

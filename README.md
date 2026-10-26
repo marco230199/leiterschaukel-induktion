@@ -145,19 +145,14 @@ Internet geladen.
 Schüler zeichnen auf der Tafel und schicken ihre Zeichnung mit **„Teilen“** an die Lehrkraft. Die Lehrerseite
 zeigt alle Abgaben live; ein Klick öffnet eine Abgabe groß auf der Tafel.
 
-Dafür gibt es einen kleinen Node.js-Server (`server/`, ohne weitere Abhängigkeiten). Er läuft wahlweise
+Dafür gibt es einen kleinen Node.js-Server (`server/`, ohne weitere Abhängigkeiten), der auf dem Lehrer-Laptop
+läuft und die Simulation selbst mit ausliefert: Alle Geräte im selben WLAN öffnen `http://<Laptop-IP>:8080`.
 
-- **im Internet** (empfohlen): Die Simulation bleibt auf GitHub Pages und verbindet sich per HTTPS/WebSocket (WSS)
-  mit dem Server. Schüler können aus jedem Netz mitmachen (Schul-WLAN, Mobilfunk).
-- **lokal auf dem Laptop** (Ausweichlösung ohne Internet): Der Server liefert die Simulation selbst mit aus,
-  alle öffnen `http://<Laptop-IP>:8080`.
-
-Ohne erreichbaren Server ist „Teilen“ ausgeblendet; die Simulation funktioniert wie bisher.
+Ohne Server (GitHub Pages, Live Server) ist „Teilen“ ausgeblendet; die Simulation funktioniert wie bisher.
 
 ### Ablauf in der Stunde
 
-1. Lehrerseite öffnen: `https://marco230199.github.io/leiterschaukel-induktion/?lehrer` (lokal:
-   `http://localhost:8080/lehrer`), PIN eingeben. Die Seite erzeugt einen zufälligen **Raumcode** (z. B. `k7m2`)
+1. Server starten (siehe unten), Lehrerseite `http://localhost:8080/lehrer` öffnen, PIN eingeben. Die Seite erzeugt einen zufälligen **Raumcode** (z. B. `k7m2`)
    und schreibt ihn in die Adresse – Neuladen bleibt im selben Raum, die Anmeldung gilt in diesem Tab weiter
    (bis zu 12 Stunden bzw. bis zum Neustart des Servers). Unten erscheint die Leiste **„Abgaben“** mit Raumcode,
    Adresse und QR-Code („Groß“ zeigt den QR-Code groß und alle Abgaben als Raster).
@@ -181,102 +176,7 @@ Beamer nicht nebenbei mitscannen (ohne PIN kämen sie ohnehin nicht weiter).
 Mehrere Klassen gleichzeitig: Jede neu geöffnete Lehrerseite bekommt ihren eigenen Raumcode und sieht nur dessen
 Abgaben. Einen festen Code kann man mit `?lehrer&raum=10b` wählen.
 
-### Server im Internet: Hetzner Cloud (Deutschland)
-
-Vorschlag: der kleinste Cloud-Server bei **Hetzner** (deutscher Anbieter, Rechenzentren in Nürnberg und
-Falkenstein, Abrechnung stundengenau, um 4–5 € im Monat – aktuellen Preis auf hetzner.com prüfen). Caddy besorgt
-das HTTPS-Zertifikat automatisch. Als Adresse dient vorerst kostenlos `<IP-mit-Strichen>.sslip.io`
-(z. B. `49-12-34-56.sslip.io` zeigt auf 49.12.34.56); später lässt sich eine eigene Domain eintragen.
-
-**Voraussetzung:** Die Änderungen sind auf GitHub gepusht (der Server holt sich den Code von dort).
-
-1. **Konto** auf <https://console.hetzner.cloud> anlegen (mit Identitätsprüfung und Zahlungsmittel).
-   Unter „Auftragsverarbeitung“ im Konto den **AVV** abschließen (für den Datenschutz an der Schule).
-2. **SSH-Schlüssel** auf dem Laptop erzeugen (falls noch keiner da ist) und anzeigen:
-
-   ```bash
-   ssh-keygen -t ed25519          # Enter für die Vorgaben, Passphrase nach Wunsch
-   cat ~/.ssh/id_ed25519.pub      # diese Zeile gleich bei Hetzner einfügen
-   ```
-
-3. **Server anlegen** (Projekt → „Server hinzufügen“): Standort Nürnberg oder Falkenstein, Image **Ubuntu 24.04**,
-   Typ: der günstigste mit gemeinsamer vCPU (x86), Netzwerk: **öffentliche IPv4** angehakt, SSH-Schlüssel
-   einfügen, Name z. B. `abgabe`. Nach dem Erstellen die IPv4-Adresse notieren.
-4. **Einrichten** – auf dem Laptop:
-
-   ```bash
-   ssh root@49.12.34.56           # eigene IP; die Frage nach dem Fingerabdruck mit „yes“ beantworten
-   ```
-
-   und dann auf dem Server:
-
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/marco230199/leiterschaukel-induktion/master/server/deploy/einrichten.sh -o einrichten.sh
-   bash einrichten.sh
-   ```
-
-   Das Skript installiert Node.js, Caddy und git, holt den Code nach `/opt/leiterschaukel`, richtet den Dienst
-   und die Firewall (nur SSH, HTTP, HTTPS) ein und zeigt am Ende **Server-Adresse und PIN** an.
-5. **Prüfen:** `https://49-12-34-56.sslip.io/api/status` im Browser öffnen → `{"server":"leiterschaukel-abgabe",…}`.
-   (Das erste Zertifikat kann ein paar Sekunden dauern.)
-6. **Simulation verbinden:** in `js/config.js` die Adresse eintragen, committen und pushen:
-
-   ```js
-   export const ABGABE_SERVER = 'https://49-12-34-56.sslip.io';
-   ```
-
-   Sobald GitHub Pages aktualisiert ist (1–2 Minuten), zeigt die Simulation auf GitHub Pages den Knopf „Teilen“,
-   wenn sie mit Raumcode geöffnet wird.
-
-**Später nützlich** (per `ssh root@<IP>`):
-
-| Was | Befehl |
-| --- | --- |
-| Code aktualisieren (löscht laufende Abgaben!) | `bash /opt/leiterschaukel/server/deploy/einrichten.sh` |
-| PIN ändern | `nano /etc/leiterschaukel-abgabe.env`, dann `systemctl restart leiterschaukel-abgabe` |
-| Läuft der Dienst? / Meldungen | `systemctl status leiterschaukel-abgabe` / `journalctl -u leiterschaukel-abgabe` |
-| Eigene Domain statt sslip.io | DNS-Eintrag (A) auf die IP, dann `bash einrichten.sh abgabe.meine-domain.de` und `ABGABE_SERVER` anpassen |
-
-Sicherheitsupdates von Ubuntu spielt `unattended-upgrades` automatisch ein. Braucht man den Server nicht mehr,
-in der Hetzner-Konsole löschen – erst dann fallen keine Kosten mehr an.
-
-### Erster Test aus dem Internet: Server auf dem Laptop + Cloudflare Tunnel
-
-Ein Cloudflare Tunnel macht den Server auf dem Laptop ohne Konto, ohne Firewall-Änderung und ohne Push unter einer
-zufälligen HTTPS-Adresse erreichbar – auch fürs iPad im Mobilfunknetz. Cloudflare ist ein US-Anbieter: **nur zum
-Testen**, nicht mit echten Schülerdaten.
-
-1. `cloudflared` einmalig installieren:
-
-   ```bash
-   mkdir -p ~/.local/bin
-   curl -fsSL -o ~/.local/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-   chmod +x ~/.local/bin/cloudflared
-   ```
-
-2. Server starten (Terminal 1, im Ordner `leiterschaukel-induktion`): `npm start` – PIN notieren.
-3. Tunnel starten (Terminal 2):
-
-   ```bash
-   cloudflared tunnel --url http://localhost:8080
-   ```
-
-   Nach einigen Sekunden steht dort eine Adresse wie `https://ruhig-blau-fisch.trycloudflare.com`.
-4. Am Laptop `https://ruhig-blau-fisch.trycloudflare.com/lehrer` öffnen, PIN eingeben. Der QR-Code zeigt jetzt auf
-   die Tunnel-Adresse (mit Raumcode).
-5. iPad (z. B. WLAN aus, nur Mobilfunk): QR-Code scannen, zeichnen, teilen – die Abgabe erscheint am Laptop.
-
-**Mit der echten GitHub-Pages-Seite testen** (nachdem die Änderungen gepusht sind): Die Serveradresse lässt sich
-an die Seitenadresse hängen, ohne `config.js` zu ändern:
-
-```text
-https://marco230199.github.io/leiterschaukel-induktion/?lehrer&server=https://ruhig-blau-fisch.trycloudflare.com
-```
-
-Der QR-Code der Lehrerseite enthält den `server`-Zusatz dann ebenfalls. Die Tunnel-Adresse ändert sich bei jedem
-Start von `cloudflared`. Beenden: in beiden Terminals Strg+C.
-
-### Lokaler Betrieb auf dem Laptop (ohne Internet)
+### Server auf dem Laptop starten
 
 ```bash
 sudo dnf install nodejs        # einmalig; Node.js ab Version 18
@@ -302,35 +202,31 @@ Laptop-Hotspot heißt sie meist `nm-shared`.
 **Wenn das WLAN die Geräte voneinander isoliert** (Schüler erreichen die Laptop-Adresse nicht): Hotspot vom Laptop
 (GNOME-Einstellungen → WLAN → ⋮ → „WLAN-Hotspot einschalten …“ oder
 `nmcli device wifi hotspot ssid Physik password 'geheim123'`; Server danach starten bzw. Lehrerseite neu laden),
-Hotspot vom Handy für alle Geräte, oder die Schul-IT nach einem Netz ohne Client-Isolation fragen – oder gleich
-den Server im Internet nutzen.
+Hotspot vom Handy für alle Geräte, oder die Schul-IT nach einem Netz ohne Client-Isolation fragen.
+
+**Standby:** Der Server wird im Standby nur angehalten; die Abgaben bleiben erhalten, alle Seiten verbinden sich
+nach dem Aufwachen von selbst neu. Damit der Laptop im Unterricht gar nicht erst einschläft (auch nicht beim
+Zuklappen): `systemd-inhibit --what=idle:sleep:handle-lid-switch npm start`.
 
 ### Datenschutz und Schutzmaßnahmen
 
 - Abgaben liegen **nur im Arbeitsspeicher** des Servers; nichts wird auf die Festplatte geschrieben, keine Accounts,
-  keine Zugriffsprotokolle (Caddy ist so eingestellt, der Node-Server protokolliert nur Fehler). Beim Neustart des
+  keine Zugriffsprotokolle (der Server protokolliert nur Fehler). Beim Neustart des
   Servers ist alles weg; verwaiste Räume werden nach 12 Stunden gelöscht. Eigene Zeichnung, Name und eine zufällige
   Geräte-Kennung bleiben nur im Browser des jeweiligen Geräts.
-- Empfehlung: Kürzel statt vollständiger Namen. Für den Einsatz mit Klassen den AVV mit Hetzner abschließen und den
-  Einsatz mit der bzw. dem Datenschutzbeauftragten der Schule abstimmen.
-- **CORS/Herkunft:** Nur `https://marco230199.github.io` und Seiten, die vom Server selbst kommen (lokaler Betrieb,
-  Tunnel), dürfen den Server aus dem Browser nutzen – auch für den WebSocket, für den der Browser selbst kein CORS
-  prüft. Weitere Seiten: Umgebungsvariable `ERLAUBTE_HERKUNFT` (durch Komma getrennt). Das hält fremde Webseiten
-  ab, aber keine Skripte, die ihre Herkunft fälschen – dafür sind die folgenden Grenzen da.
+- Empfehlung: Kürzel statt vollständiger Namen.
+- Nur Seiten, die vom Server selbst kommen, dürfen sich per WebSocket verbinden (Origin-Prüfung).
 - Lehrerseite (Abgaben sehen, löschen) nur mit PIN; danach ein Token, das 12 Stunden gilt. Höchstens 5 PIN-Versuche
-  pro Minute je IP-Adresse und 60 falsche insgesamt pro Minute.
+  pro Minute je IP-Adresse.
 - Abgeben nur in Räume, die eine angemeldete Lehrerseite geöffnet hat. Pro Abgabe höchstens 1,5 MB, 1500 Striche
-  und 60 000 Punkte; höchstens 6 Abgaben pro Minute je Gerät und je IP-Adresse (hinter Caddy bzw. dem Tunnel zählt
-  die echte Adresse des Geräts); höchstens 150 Abgaben pro Raum und 20 Räume.
+  und 60 000 Punkte; höchstens 6 Abgaben pro Minute je Gerät und je IP-Adresse; höchstens 150 Abgaben pro Raum
+  und 20 Räume.
 
 ### Technik
 
 - `server/server.js`: Erkennung (`GET /api/status`), Anmeldung (`POST /api/login` → Token), WebSocket unter `/ws`
-  für alles Weitere (Nachrichten oben in der Datei beschrieben) und – für den lokalen Betrieb – die statischen
-  Dateien der Simulation. `server/websocket.js` ist ein minimaler WebSocket-Server nur mit Node-Bordmitteln.
-  `server/deploy/`: Einrichtungsskript, Systemdienst und Caddy-Konfiguration für den Server im Internet.
-- Welcher Server benutzt wird (`js/abgabe.js`): Kommt die Seite vom Abgabe-Server selbst, dieser; sonst `?server=…`
-  oder `ABGABE_SERVER` aus `js/config.js`.
+  für alles Weitere (Nachrichten oben in der Datei beschrieben) und die statischen Dateien der Simulation.
+  `server/websocket.js` ist ein minimaler WebSocket-Server nur mit Node-Bordmitteln.
 - Zeichnungen werden als **Vektordaten** übertragen (`js/striche.js`): Freihandstriche als Punkte mit Stiftdruck,
   Pfeile als Anfangs- und Endpunkt, jeweils mit Farbe. Koordinaten beziehen sich auf das Tafelbild (1600 × 1000).
   Dieselbe Datei prüft die Abgaben auf dem Server.
@@ -360,10 +256,9 @@ leiterschaukel-induktion/
 ├── css/style.css
 ├── bilder/tafel.jpg    # Bild auf der Tafel (Leiter im Magnetfeld)
 ├── server/
-│   ├── server.js       # Abgabe-Server: Abgaben per WebSocket, im Internet oder lokal (npm start)
+│   ├── server.js       # Abgabe-Server auf dem Laptop: Abgaben per WebSocket (npm start)
 │   ├── websocket.js    # minimaler WebSocket-Server ohne Abhängigkeiten
-│   ├── offline.js      # lädt three.js & Co. für den Betrieb ohne Internet (npm run offline)
-│   └── deploy/         # Server im Internet: einrichten.sh, Systemdienst, Caddyfile
+│   └── offline.js      # lädt three.js & Co. für den Betrieb ohne Internet (npm run offline)
 ├── js/
 │   ├── main.js         # Start und Render-Schleife
 │   ├── config.js       # Maße und Modellgrößen

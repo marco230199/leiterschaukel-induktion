@@ -109,11 +109,6 @@ export const LAMP = { THRESHOLD: 1.5e-3, FULL: 5e-3, HEAT_TIME: 0.08, POS: LED.P
 // Öffentliche Adresse (GitHub Pages): für den QR-Code, wenn die Seite lokal geöffnet ist
 export const PUBLIC_URL = 'https://marco230199.github.io/leiterschaukel-induktion/';
 
-// Abgabe-Server im Internet (siehe server/ und README), z. B. 'https://49-12-34-56.sslip.io'. Leer: keine Abgabe auf
-// GitHub Pages. Zum Testen lässt sich die Adresse mit ?server=https://… an der Seitenadresse überschreiben.
-// Kommt die Seite vom Abgabe-Server selbst (lokaler Betrieb, Cloudflare Tunnel), wird immer dieser benutzt.
-export const ABGABE_SERVER = '';
-
 // Zeigermessgerät: Zeiger als gedämpfter Schwinger (Eigenfrequenz, Dämpfungsgrad)
 export const METER = {
   FREQ: 1.2,                  // in Hz
